@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "inlineSources": false,
+    "module": "node16",
+    "moduleResolution": "node16",
+    "target": "ES2020",
+    "esModuleInterop": true,
+    "strict": true,
+    "verbatimModuleSyntax": true
+  }
+}
+

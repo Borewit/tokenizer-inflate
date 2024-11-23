@@ -1,0 +1,20 @@
+# Node module
+node_modules
+
+#IntelliJ IDEA:
+.idea
+*.iml
+
+# Yarn:
+.pnp.*
+.yarn/*
+
+# Project
+lib/**/*.js
+lib/**/*.js.map
+lib/**/*.d.ts
+test/**/*.js
+test/**/*.js.map
+test/**/*.d.ts
+test/resources/tmp.dat
+coverage

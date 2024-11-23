@@ -1,0 +1,23 @@
+version: 2
+updates:
+
+  # ECMAScript Module (ESM)
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      time: "06:00"
+    open-pull-requests-limit: 30
+    versioning-strategy: increase
+    target-branch: "master"
+    labels:
+      - dependencies
+    groups:
+      remark:
+        dependency-type: "development"
+        patterns:
+          - "remark*"
+      types:
+        dependency-type: "development"
+        patterns:
+          - "@types/*"
