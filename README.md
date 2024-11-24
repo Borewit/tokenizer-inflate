@@ -1,5 +1,5 @@
 [![Node.js CI](https://github.com/Borewit/tokenizer-deflate/actions/workflows/nodejs-ci.yml/badge.svg)](https://github.com/Borewit/tokenizer-deflate/actions/workflows/nodejs-ci.yml)
-[![NPM version](https://badge.fury.io/js/@tokenizer/deflate.svg)](https://npmjs.org/package/@tokenizer/deflate)
+[![NPM version](https://badge.fury.io/js/%40tokenizer%2Fdeflate.svg)](https://npmjs.org/package/@tokenizer/deflate)
 [![npm downloads](http://img.shields.io/npm/dm/@tokenizer/deflate.svg)](https://npmcharts.com/compare/tokenizer-deflate?start=1200&interval=30)
 
 # @tokenizer/deflate
