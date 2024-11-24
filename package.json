@@ -1,6 +1,6 @@
 {
   "name": "@tokenizer/deflate",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Tokenized zip support",
   "type": "module",
   "exports": "./lib/index.js",
