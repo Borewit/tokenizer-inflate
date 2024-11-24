@@ -44,6 +44,13 @@ describe('Different ZIP encode options', () => {
     assertFileIsXml(fileData);
   });
 
+  it("should be able to extract uncompressed data", async () => {
+    const fileData = await extractFileFromFixture('fixture.odp', 'mimetype');
+    assert.isDefined(fileData);
+    const text = new TextDecoder('utf-8').decode(fileData);
+    assert.strictEqual(text, 'application/vnd.oasis.opendocument.presentation')
+  });
+
 });
 
 function assertFileIsXml(fileData: Uint8Array) {

@@ -158,8 +158,12 @@ export class ZipHandler {
         // Extract file data
         if(!fileData)
           throw new Error('fileData should be assigned');
-        const uncompressedData = decompressSync(fileData);
-        await next.handler(uncompressedData);
+        if (zipHeader.compressedMethod === 0) {
+          await next.handler(fileData);
+        } else {
+          const uncompressedData = decompressSync(fileData);
+          await next.handler(uncompressedData);
+        }
       }
     } while(!stop);
   }
