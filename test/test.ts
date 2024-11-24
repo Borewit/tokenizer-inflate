@@ -1,91 +1,52 @@
 import {it} from 'mocha';
 import {assert} from 'chai';
-import {detector, scanOpenOfficeXmlDocFromTokenizer} from "./ooxml.js";
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {fromFile} from 'strtok3';
-import {type Detector, NodeFileTypeParser} from 'file-type';
+import {ZipHandler} from "../lib/index.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixturePath = join(__dirname, 'fixture');
 
-async function getMimeFromFixtureAsTokenizer(fixture: string): Promise<string | undefined> {
+async function extractFileFromFixture(fixture: string, filename: string): Promise<Uint8Array | undefined> {
+
   const tokenizer = await fromFile(join(fixturePath, fixture));
+  const zipHandler = new ZipHandler(tokenizer);
+
   try {
-    return await scanOpenOfficeXmlDocFromTokenizer(tokenizer);
+    let fileData: Uint8Array | undefined;
+    await zipHandler.unzip(zipFile => {
+      const match = zipFile.filename === filename;
+      return {
+        handler: match ? async _fileData => {
+          fileData = _fileData;
+        } : false,
+        stop: match
+      }
+    });
+    return fileData;
   } finally {
     await tokenizer.close();
   }
 }
 
-const mimeType = {
-  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  vsdx: 'application/vnd.ms-visio.drawing'
-};
+describe('Different ZIP encode options', () => {
 
-const fixtures = [
-  {
-    fixture: 'file_example_XLSX_10.xlsx',
-    type: mimeType.xlsx,
-  },
-  {
-    fixture: 'fixture.docx',
-    type: mimeType.docx,
-  },
-  {
-    fixture: 'fixture.xlsx',
-    type: mimeType.xlsx,
-  },
-  {
-    fixture: 'fixture2.pptx',
-    type: mimeType.pptx,
-  },
-  {
-    fixture: 'fixture2.xlsx',
-    type: mimeType.xlsx,
-  },
-  {
-    fixture: 'fixture.docx',
-    type: mimeType.docx,
-  },
-  {
-    fixture: 'fixture-vsdx.vsdx',
-    type: mimeType.vsdx,
-  },
-  {
-    fixture: 'fixture-vstx.vsdx',
-    type: mimeType.vsdx,
-  }
-];
+  it("should be able to decode a ZIP file with the \"data descriptor\" flag set", async () => {
+    const fileData = await extractFileFromFixture('file_example_XLSX_10.xlsx', '[Content_Types].xml');
+    assert.isDefined(fileData);
+    assertFileIsXml(fileData);
+  });
 
-describe('Test OOXML fixtures', () => {
+  it("should be able to decode a ZIP file with the \"data descriptor\" flag disabled", async () => {
+    const fileData = await extractFileFromFixture('fixture.docx', '[Content_Types].xml');
+    assert.isDefined(fileData);
+    assertFileIsXml(fileData);
+  });
 
-  for(const fixture of fixtures) {
-    describe(`fixture "${fixture.fixture}"`, () => {
-
-      it("from tokenizer", async () => {
-        assert.strictEqual(await getMimeFromFixtureAsTokenizer(fixture.fixture), fixture.type);
-      });
-
-      it("file-type", async () => {
-        const customDetectors: Iterable<Detector> = [detector as unknown as Detector];
-        const fileTypeParser = new NodeFileTypeParser({
-          customDetectors,
-          signal: undefined as unknown as AbortSignal
-        });
-        const path = join(fixturePath, fixture.fixture);
-        const type = await fileTypeParser.fromFile(path);
-        assert.isDefined(type);
-        assert.strictEqual(type.mime, fixture.type);
-        assert.isDefined(type.ext);
-      });
-
-    });
-  }
 });
 
-it("single file", async () => {
-  assert.strictEqual(await getMimeFromFixtureAsTokenizer(fixtures[0].fixture), fixtures[0].type);
-});
+function assertFileIsXml(fileData: Uint8Array) {
+  const xmlContent = new TextDecoder('utf-8').decode(fileData);
+  assert.strictEqual(xmlContent.indexOf("<?xml version=\"1.0\""), 0);
+}
