@@ -16,6 +16,7 @@ async function extractFileFromFixture(fixture: string, filename: string): Promis
   try {
     let fileData: Uint8Array | undefined;
     await zipHandler.unzip(zipFile => {
+      console.log(`filename="${zipFile.filename}", compressedMethod=${zipFile.compressedMethod}, dataDescriptor=${zipFile.dataDescriptor}`);
       const match = zipFile.filename === filename;
       return {
         handler: match ? async _fileData => {
@@ -32,23 +33,69 @@ async function extractFileFromFixture(fixture: string, filename: string): Promis
 
 describe('Different ZIP encode options', () => {
 
-  it("should be able to decode a ZIP file with the \"data descriptor\" flag set", async () => {
+  it("inflate a ZIP file with the \"data descriptor\" flag set", async () => {
     const fileData = await extractFileFromFixture('file_example_XLSX_10.xlsx', '[Content_Types].xml');
     assert.isDefined(fileData);
     assertFileIsXml(fileData);
   });
 
-  it("should be able to decode a ZIP file with the \"data descriptor\" flag disabled", async () => {
+  it("inflate a ZIP file with the \"data descriptor\" flag disabled", async () => {
     const fileData = await extractFileFromFixture('fixture.docx', '[Content_Types].xml');
     assert.isDefined(fileData);
     assertFileIsXml(fileData);
   });
 
-  it("should be able to extract uncompressed data", async () => {
+  it("extract uncompressed data", async () => {
     const fileData = await extractFileFromFixture('fixture.odp', 'mimetype');
     assert.isDefined(fileData);
     const text = new TextDecoder('utf-8').decode(fileData);
     assert.strictEqual(text, 'application/vnd.oasis.opendocument.presentation')
+  });
+
+  it("inflate deflate", async () => {
+    const fileData = await extractFileFromFixture('sample-deflate.zip', 'sample3.doc');
+    assert.isDefined(fileData);
+    const text = new TextDecoder('utf-8').decode(fileData);
+    assert.strictEqual(fileData.length, 15684);
+  });
+
+  it("inflate deflate64", async () => {
+    const fileData = await extractFileFromFixture('sample-deflate64.zip', 'sample3.doc');
+    assert.isDefined(fileData);
+    const text = new TextDecoder('utf-8').decode(fileData);
+    assert.strictEqual(fileData.length, 15684);
+  });
+
+});
+
+describe('Deflate some zip files', () => {
+
+  it("inflate sample-4", async () => {
+    const fileData = await extractFileFromFixture('sample-zip-files-sample-4.zip', 'sample1.doc');
+    assert.isDefined(fileData);
+    const text = new TextDecoder('utf-8').decode(fileData);
+    assert.strictEqual(fileData.length, 9779);
+  });
+
+  it("inflate sample-5", async () => {
+    const fileData = await extractFileFromFixture('sample-zip-files-sample-5.zip', 'sample2.doc');
+    assert.isDefined(fileData);
+    const text = new TextDecoder('utf-8').decode(fileData);
+    assert.strictEqual(fileData.length, 10199);
+  });
+
+  it("inflate sample-6", async () => {
+    const fileData = await extractFileFromFixture('sample-zip-files-sample-6.zip', 'sample3.doc');
+    assert.isDefined(fileData);
+    const text = new TextDecoder('utf-8').decode(fileData);
+    assert.strictEqual(fileData.length, 15684);
+  });
+
+  it("inflate deflate64", async () => {
+    const fileData = await extractFileFromFixture('sample-deflate64.zip', 'sample3.doc');
+    assert.isDefined(fileData);
+    const text = new TextDecoder('utf-8').decode(fileData);
+    assert.strictEqual(fileData.length, 15684);
   });
 
 });
