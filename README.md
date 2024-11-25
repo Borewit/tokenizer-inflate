@@ -1,6 +1,6 @@
 [![Node.js CI](https://github.com/Borewit/tokenizer-deflate/actions/workflows/nodejs-ci.yml/badge.svg)](https://github.com/Borewit/tokenizer-deflate/actions/workflows/nodejs-ci.yml)
 [![NPM version](https://badge.fury.io/js/%40tokenizer%2Fdeflate.svg)](https://npmjs.org/package/@tokenizer/deflate)
-[![npm downloads](http://img.shields.io/npm/dm/@tokenizer%2Fdeflate.svg)](https://npmcharts.com/compare/%40tokenizer%2Fdeflate?start=1200&interval=30)
+[![npm downloads](https://img.shields.io/npm/dm/@tokenizer%2Fdeflate.svg)](https://npmcharts.com/compare/%40tokenizer%2Fdeflate?start=1200&interval=30)
 [![Bundle Size](https://pkg-size.dev/badge/bundle/8168)](https://pkg-size.dev/@tokenizer/deflate)
 
 # @tokenizer/deflate
