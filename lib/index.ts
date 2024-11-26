@@ -2,7 +2,7 @@ import {EndOfStreamError, type IGetToken, type ITokenizer} from "strtok3";
 import {StringType} from "token-types";
 import {decompressSync} from "fflate";
 
-const chunkSize = 4096;
+const syncBufferSize = 256 * 1024;
 
 const headerPrefix = [0x50, 0x4B, 0x3, 0x4];
 
@@ -71,23 +71,9 @@ const ZipHeaderToken: IGetToken<ILocalFileHeader> = {
   }, len: 30
 }
 
-/**
- *  crc-32                          4 bytes
- *  compressed size                 4 bytes
- *  uncompressed size               4 bytes
- */
-const DataDescriptorToken: IGetToken<IDataDescriptor> = {
-  get(array: Uint8Array): IDataDescriptor {
-    const view = new DataView(array.buffer);
-    return {
-      compressedSize: view.getUint32(4, true),
-      uncompressedSize: view.getUint32(8, true)
-    }
-  }, len: 12
-}
-
-
 export class ZipHandler {
+
+  private syncBuffer = new Uint8Array(syncBufferSize);
 
   constructor(private tokenizer: ITokenizer) {
   }
@@ -100,9 +86,7 @@ export class ZipHandler {
 
   async unzip(fileCb: InflateFileFilter): Promise<void> {
 
-    const buffer = new Uint8Array(ZipHeaderToken.len);
-
-    if (!await this.isZip()) {
+   if (!await this.isZip()) {
       throw new Error('This is not a Zip archive');
     }
 
@@ -126,13 +110,13 @@ export class ZipHandler {
       if (zipHeader.dataDescriptor && zipHeader.compressedSize === 0) {
         const chunks: Uint8Array[] = [];
         let nextHeaderIndex = -1;
-        let len = chunkSize;
+        let len = syncBufferSize;
+        const headerPrefixArray = new Uint8Array(headerPrefix)
 
-        while (nextHeaderIndex < 0 && len === chunkSize) {
-          const syncBuffer = new Uint8Array(chunkSize);
-          len = await this.tokenizer.peekBuffer(syncBuffer, {mayBeLess: true});
+        while (nextHeaderIndex < 0 && len === syncBufferSize) {
+          len = await this.tokenizer.peekBuffer(this.syncBuffer, {mayBeLess: true});
 
-          nextHeaderIndex = indexOf(syncBuffer, new Uint8Array(headerPrefix));
+          nextHeaderIndex = indexOf(this.syncBuffer.subarray(0, len), headerPrefixArray);
 
           const size = nextHeaderIndex >= 0 ? nextHeaderIndex : len;
 
