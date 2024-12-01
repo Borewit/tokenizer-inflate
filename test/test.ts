@@ -2,9 +2,10 @@ import {it} from 'mocha';
 import {assert} from 'chai';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {fromFile, fromWebStream, type ITokenizer} from 'strtok3';
+import {fromFile, fromStream, fromWebStream, type ITokenizer} from 'strtok3';
 import {ZipHandler} from "../lib/index.js";
 import {makeReadableByteFileStream} from "./util.js";
+import {createReadStream} from "node:fs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixturePath = join(__dirname, 'fixture');
@@ -34,7 +35,18 @@ async function extractFileFromFixtureFromFile(fixture: string, filename: string)
   }
 }
 
-async function extractFileFromFixtureFromStream(fixture: string, filename: string): Promise<Uint8Array | undefined> {
+async function extractFileFromFixtureFromNodeStream(fixture: string, filename: string): Promise<Uint8Array | undefined> {
+
+  const stream = await createReadStream(join(fixturePath, fixture));
+  const tokenizer = await fromStream(stream);
+  try {
+    return await extractFileFromFixture(tokenizer, fixture, filename);
+  } finally {
+    await tokenizer.close();
+  }
+}
+
+async function extractFileFromFixtureFromWebStream(fixture: string, filename: string): Promise<Uint8Array | undefined> {
 
   const stream = await makeReadableByteFileStream(join(fixturePath, fixture));
   const tokenizer = fromWebStream(stream.stream);
@@ -48,22 +60,39 @@ async function extractFileFromFixtureFromStream(fixture: string, filename: strin
 
 describe('Different ZIP encode options', () => {
 
-  it("inflate a ZIP file with the \"data descriptor\" flag disabled", async () => {
-    const fileData = await extractFileFromFixtureFromFile('fixture.docx', '[Content_Types].xml');
-    assert.isDefined(fileData);
-    assertFileIsXml(fileData);
+  describe('inflate a ZIP file with the \"data descriptor\" flag not set', () => {
+
+    it("inflate a ZIP file with the \"data descriptor\" flag disabled", async () => {
+      const fileData = await extractFileFromFixtureFromFile('fixture.docx', '[Content_Types].xml');
+      assert.isDefined(fileData);
+      assertFileIsXml(fileData);
+    });
+
+    it("inflate fixture.xslx", async () => {
+      const fileData = await extractFileFromFixtureFromFile('fixture.xlsx', '[Content_Types].xml');
+      assert.isDefined(fileData);
+      const text = new TextDecoder('utf-8').decode(fileData);
+      assert.strictEqual(fileData.length, 1336);
+    });
+
   });
 
   describe('inflate a ZIP file with the \"data descriptor\" flag set', () => {
 
-    it("with random-read support", async () => {
+    it("from file: with random-read support", async () => {
       const fileData = await extractFileFromFixtureFromFile('file_example_XLSX_10.xlsx', '[Content_Types].xml');
       assert.isDefined(fileData);
       assertFileIsXml(fileData);
     });
 
-    it("without random-read support", async () => {
-      const fileData = await extractFileFromFixtureFromStream('file_example_XLSX_10.xlsx', '[Content_Types].xml');
+    it("from web-stream: without random-read support", async () => {
+      const fileData = await extractFileFromFixtureFromWebStream('file_example_XLSX_10.xlsx', '[Content_Types].xml');
+      assert.isDefined(fileData);
+      assertFileIsXml(fileData);
+    });
+
+    it("from Node.js-stream: without random-read support", async () => {
+      const fileData = await extractFileFromFixtureFromNodeStream('file_example_XLSX_10.xlsx', '[Content_Types].xml');
       assert.isDefined(fileData);
       assertFileIsXml(fileData);
     });
@@ -98,7 +127,6 @@ describe('Inflate some zip files', () => {
   it("inflate sample-4", async () => {
     const fileData = await extractFileFromFixtureFromFile('sample-zip-files-sample-4.zip', 'sample1.doc');
     assert.isDefined(fileData);
-    const text = new TextDecoder('utf-8').decode(fileData);
     assert.strictEqual(fileData.length, 9779);
   });
 
@@ -119,10 +147,27 @@ describe('Inflate some zip files', () => {
   it("inflate deflate64", async () => {
     const fileData = await extractFileFromFixtureFromFile('sample-deflate64.zip', 'sample3.doc');
     assert.isDefined(fileData);
-    const text = new TextDecoder('utf-8').decode(fileData);
     assert.strictEqual(fileData.length, 15684);
   });
 
+});
+
+it("inflate fixture.zip from file", async () => {
+  const fileData = await extractFileFromFixtureFromFile('fixture.zip', 'test.jpg');
+  assert.isDefined(fileData);
+  assert.strictEqual(fileData.length, 2248);
+});
+
+it("inflate fixture.zip from web-stream", async () => {
+  const fileData = await extractFileFromFixtureFromWebStream('fixture.zip', 'test.jpg');
+  assert.isDefined(fileData);
+  assert.strictEqual(fileData.length, 2248);
+});
+
+it("inflate fixture.zip from Node.js-stream", async () => {
+  const fileData = await extractFileFromFixtureFromNodeStream('fixture.zip', 'test.jpg');
+  assert.isDefined(fileData);
+  assert.strictEqual(fileData.length, 2248);
 });
 
 function assertFileIsXml(fileData: Uint8Array) {
