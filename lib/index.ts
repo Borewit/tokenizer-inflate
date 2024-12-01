@@ -188,30 +188,32 @@ export class ZipHandler {
   }
 
   async findEndOfCentralDirectoryLocator(): Promise<number> {
-    if(this.tokenizer.supportsRandomAccess()) {
-      const randomReadTokenizer = this.tokenizer as IRandomAccessTokenizer;
-      const chunkLength = Math.min(16 * 1024, randomReadTokenizer.fileInfo.size);
-      const buffer = this.syncBuffer.subarray(0, chunkLength);
-      await this.tokenizer.readBuffer(buffer, {position: randomReadTokenizer.fileInfo.size - chunkLength});
-      // Search the buffer from end to beginning for EOCD signature
-      // const signature = 0x06054b50;
-      const signatureBytes = new Uint8Array([0x50, 0x4b, 0x05, 0x06]); // EOCD signature bytes
-      for (let i = buffer.length - 4; i >= 0; i--) {
-        // Compare 4 bytes directly without calling readUInt32LE
-        if (
-          buffer[i] === signatureBytes[0] &&
-          buffer[i + 1] === signatureBytes[1] &&
-          buffer[i + 2] === signatureBytes[2] &&
-          buffer[i + 3] === signatureBytes[3]
-        ) {
-          return randomReadTokenizer.fileInfo.size - chunkLength + i;
-        }
+    const randomReadTokenizer = this.tokenizer as IRandomAccessTokenizer;
+    const chunkLength = Math.min(16 * 1024, randomReadTokenizer.fileInfo.size);
+    const buffer = this.syncBuffer.subarray(0, chunkLength);
+    await this.tokenizer.readBuffer(buffer, {position: randomReadTokenizer.fileInfo.size - chunkLength});
+    // Search the buffer from end to beginning for EOCD signature
+    // const signature = 0x06054b50;
+    const signatureBytes = new Uint8Array([0x50, 0x4b, 0x05, 0x06]); // EOCD signature bytes
+    for (let i = buffer.length - 4; i >= 0; i--) {
+      // Compare 4 bytes directly without calling readUInt32LE
+      if (
+        buffer[i] === signatureBytes[0] &&
+        buffer[i + 1] === signatureBytes[1] &&
+        buffer[i + 2] === signatureBytes[2] &&
+        buffer[i + 3] === signatureBytes[3]
+      ) {
+        return randomReadTokenizer.fileInfo.size - chunkLength + i;
       }
     }
     return -1;
   }
 
   async readCentralDirectory(): Promise<IFileHeader[] | undefined> {
+    if (!this.tokenizer.supportsRandomAccess()) {
+      debug('Cannot reading central-directory without random-read support');
+      return;
+    }
     debug('Reading central-directory...');
     const pos = this.tokenizer.position;
     const offset = await this.findEndOfCentralDirectoryLocator();
