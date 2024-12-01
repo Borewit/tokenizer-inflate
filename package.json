@@ -33,18 +33,21 @@
   "devDependencies": {
     "@biomejs/biome": "=1.9.4",
     "@types/chai": "^5.0.1",
+    "@types/debug": "^4",
     "@types/mocha": "^10.0.10",
     "@types/node": "^22.9.3",
     "chai": "^5.1.2",
     "del-cli": "^6.0.0",
     "file-type": "^19.6.0",
     "mocha": "^10.8.2",
-    "strtok3": "^9.0.1",
+    "strtok3": "^10.0.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.2"
   },
   "dependencies": {
+    "debug": "^4.3.7",
     "fflate": "^0.8.2",
+    "link": "^2.1.1",
     "token-types": "^6.0.0"
   },
   "repository": {
