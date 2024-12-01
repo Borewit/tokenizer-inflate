@@ -9,7 +9,7 @@ updates:
       time: "06:00"
     open-pull-requests-limit: 30
     versioning-strategy: increase
-    target-branch: "master"
+    target-branch: "main"
     labels:
       - dependencies
     groups:
