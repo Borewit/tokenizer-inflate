@@ -16,7 +16,6 @@ async function extractFileFromFixture(fixture: string, filename: string): Promis
   try {
     let fileData: Uint8Array | undefined;
     await zipHandler.unzip(zipFile => {
-      console.log(`filename="${zipFile.filename}", compressedMethod=${zipFile.compressedMethod}, dataDescriptor=${zipFile.dataDescriptor}`);
       const match = zipFile.filename === filename;
       return {
         handler: match ? async _fileData => {
@@ -33,17 +32,18 @@ async function extractFileFromFixture(fixture: string, filename: string): Promis
 
 describe('Different ZIP encode options', () => {
 
+  it("inflate a ZIP file with the \"data descriptor\" flag disabled", async () => {
+    const fileData = await extractFileFromFixture('fixture.docx', '[Content_Types].xml');
+    assert.isDefined(fileData);
+    assertFileIsXml(fileData);
+  });
+
   it("inflate a ZIP file with the \"data descriptor\" flag set", async () => {
     const fileData = await extractFileFromFixture('file_example_XLSX_10.xlsx', '[Content_Types].xml');
     assert.isDefined(fileData);
     assertFileIsXml(fileData);
   });
 
-  it("inflate a ZIP file with the \"data descriptor\" flag disabled", async () => {
-    const fileData = await extractFileFromFixture('fixture.docx', '[Content_Types].xml');
-    assert.isDefined(fileData);
-    assertFileIsXml(fileData);
-  });
 
   it("extract uncompressed data", async () => {
     const fileData = await extractFileFromFixture('fixture.odp', 'mimetype');
