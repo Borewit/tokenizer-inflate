@@ -7,7 +7,7 @@ import {StringType, UINT16_LE, UINT32_LE} from "token-types";
 import {decompressSync} from "fflate";
 import initDebug from 'debug';
 
-const debug = initDebug('tokenizer:deflate');
+const debug = initDebug('tokenizer:inflate');
 
 const syncBufferSize = 256 * 1024;
 

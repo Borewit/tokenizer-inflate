@@ -1,11 +1,11 @@
-[![Node.js CI](https://github.com/Borewit/tokenizer-deflate/actions/workflows/nodejs-ci.yml/badge.svg)](https://github.com/Borewit/tokenizer-deflate/actions/workflows/nodejs-ci.yml)
-[![NPM version](https://badge.fury.io/js/%40tokenizer%2Fdeflate.svg)](https://npmjs.org/package/@tokenizer/deflate)
-[![npm downloads](https://img.shields.io/npm/dm/@tokenizer%2Fdeflate.svg)](https://npmcharts.com/compare/%40tokenizer%2Fdeflate?start=1200&interval=30)
-[![Bundle Size](https://pkg-size.dev/badge/bundle/8168)](https://pkg-size.dev/@tokenizer/deflate)
+[![Node.js CI](https://github.com/Borewit/tokenizer-inflate/actions/workflows/nodejs-ci.yml/badge.svg)](https://github.com/Borewit/tokenizer-inflate/actions/workflows/nodejs-ci.yml)
+[![NPM version](https://badge.fury.io/js/%40tokenizer%2Finflate.svg)](https://npmjs.org/package/@tokenizer/inflate)
+[![npm downloads](https://img.shields.io/npm/dm/@tokenizer%2Finflate.svg)](https://npmcharts.com/compare/%40tokenizer%2Finflate?start=1200&interval=30)
+[![Bundle Size](https://pkg-size.dev/badge/bundle/8168)](https://pkg-size.dev/@tokenizer/inflate)
 
-# @tokenizer/deflate
+# @tokenizer/inflate
 
-`@tokenizer/deflate` is a package designed for handling and extracting data from ZIP files efficiently using a tokenizer-based approach.
+`@tokenizer/inflate` is a package designed for handling and extracting data from ZIP files efficiently using a tokenizer-based approach.
 The library provides a customizable way to parse ZIP archives and extract compressed data while minimizing memory usage.
 
 ## Features
@@ -16,7 +16,7 @@ The library provides a customizable way to parse ZIP archives and extract compre
 
 ## Installation
 ```bash
-npm install @tokenizer/deflate
+npm install @tokenizer/inflate
 ```
 
 ## Usage
@@ -26,7 +26,7 @@ npm install @tokenizer/deflate
 The following example demonstrates how to use the library to extract .txt files and stop processing when encountering a .stop file.
 
 ```ts
-import { ZipHandler, InflateFileFilter } from "@tokenizer/deflate";
+import { ZipHandler, InflateFileFilter } from "@tokenizer/inflate";
 import { fromFile } from "strtok3";
 
 const fileFilter: InflateFileFilter = (file) => {

@@ -68,7 +68,7 @@ describe('Different ZIP encode options', () => {
 
 });
 
-describe('Deflate some zip files', () => {
+describe('Inflate some zip files', () => {
 
   it("inflate sample-4", async () => {
     const fileData = await extractFileFromFixture('sample-zip-files-sample-4.zip', 'sample1.doc');
