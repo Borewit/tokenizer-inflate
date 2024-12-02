@@ -19,7 +19,7 @@ async function extractFileFromFixture(tokenizer: ITokenizer, fixture: string, fi
       handler: match ? async _fileData => {
         fileData = _fileData;
       } : false,
-      stop: match
+      stop: false
     }
   });
   return fileData;
@@ -37,7 +37,7 @@ async function extractFileFromFixtureFromFile(fixture: string, filename: string)
 
 async function extractFileFromFixtureFromNodeStream(fixture: string, filename: string): Promise<Uint8Array | undefined> {
 
-  const stream = await createReadStream(join(fixturePath, fixture));
+  const stream = createReadStream(join(fixturePath, fixture));
   const tokenizer = await fromStream(stream);
   try {
     return await extractFileFromFixture(tokenizer, fixture, filename);
