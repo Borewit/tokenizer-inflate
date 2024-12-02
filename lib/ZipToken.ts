@@ -5,6 +5,13 @@
 import type {IGetToken} from "strtok3";
 import {UINT16_LE, UINT32_LE} from "token-types";
 
+export const Signature = {
+  LocalFileHeader: 0x04034b50,
+  DataDescriptor: 0x08074b50,
+  CentralFileHeader: 0x02014b50,
+  EndOfCentralDirectory: 0x06054b50
+}
+
 interface IDataDescriptor {
   signature: number;
   compressedSize: number;

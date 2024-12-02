@@ -1,5 +1,5 @@
-import {EndOfStreamError, type IRandomAccessTokenizer, type ITokenizer} from 'strtok3';
-import {StringType} from 'token-types';
+import type {IRandomAccessTokenizer, ITokenizer} from 'strtok3';
+import {StringType, UINT32_LE} from 'token-types';
 import {decompressSync} from 'fflate';
 import initDebug from 'debug';
 import {
@@ -8,28 +8,26 @@ import {
   FileHeader,
   type IFileHeader,
   type ILocalFileHeader,
-  LocalFileHeaderToken
+  LocalFileHeaderToken, Signature
 } from "./ZipToken.js";
-
-const debug = initDebug('tokenizer:inflate');
-
-const syncBufferSize = 256 * 1024;
-
-/**
- * Local file header signature 0x04034b50
- * Ref: 4.3.7
- */
-const SignatureLocalFileHeader = [0x50, 0x4B, 0x03, 0x04];
-/**
- * Data descriptor record signature 0x08074b50
- * Ref: 4.3.9.3
- */
-const SignatureDataDescriptor = [0x50, 0x4B, 0x07, 0x08];
 
 export type InflateFileFilterResult = {
   handler: InflatedDataHandler | false; // Function to handle extracted file data
   stop?: boolean;               // Signal to stop processing further files
 };
+
+function signatureToArray(signature: number): Uint8Array {
+  const signatureBytes = new Uint8Array(UINT32_LE.len);
+  UINT32_LE.put(signatureBytes, 0, signature);
+  return signatureBytes;
+}
+
+const debug = initDebug('tokenizer:inflate');
+
+const syncBufferSize = 256 * 1024;
+
+const ddSignatureArray = signatureToArray(Signature.DataDescriptor);
+const eocdSignatureBytes = signatureToArray(Signature.EndOfCentralDirectory);
 
 /**
  * Return false when to ignore the file, return `InflatedDataHandler` to handle extracted data
@@ -48,9 +46,11 @@ export class ZipHandler {
   }
 
   async isZip(): Promise<boolean> {
-    const magicPrefix = new Uint8Array(4);
-    const len = await this.tokenizer.peekBuffer(magicPrefix, {mayBeLess: true});
-    return len === 4 && SignatureLocalFileHeader.every((v, i) => magicPrefix[i] === v);
+    return await this.peekSignature() === Signature.LocalFileHeader;
+  }
+
+  private peekSignature(): Promise<number> {
+    return this.tokenizer.peekToken(UINT32_LE);
   }
 
   async findEndOfCentralDirectoryLocator(): Promise<number> {
@@ -60,14 +60,13 @@ export class ZipHandler {
     await this.tokenizer.readBuffer(buffer, {position: randomReadTokenizer.fileInfo.size - chunkLength});
     // Search the buffer from end to beginning for EOCD signature
     // const signature = 0x06054b50;
-    const signatureBytes = new Uint8Array([0x50, 0x4b, 0x05, 0x06]); // EOCD signature bytes
     for (let i = buffer.length - 4; i >= 0; i--) {
       // Compare 4 bytes directly without calling readUInt32LE
       if (
-        buffer[i] === signatureBytes[0] &&
-        buffer[i + 1] === signatureBytes[1] &&
-        buffer[i + 2] === signatureBytes[2] &&
-        buffer[i + 3] === signatureBytes[3]
+        buffer[i] === eocdSignatureBytes[0] &&
+        buffer[i + 1] === eocdSignatureBytes[1] &&
+        buffer[i + 2] === eocdSignatureBytes[2] &&
+        buffer[i + 3] === eocdSignatureBytes[3]
       ) {
         return randomReadTokenizer.fileInfo.size - chunkLength + i;
       }
@@ -101,31 +100,30 @@ export class ZipHandler {
   }
 
   async unzip(fileCb: InflateFileFilter): Promise<void> {
-
-    if (!await this.isZip()) {
-      throw new Error('This is not a Zip archive');
-    }
-
     let entry = 0;
 
     let stop = false;
     do {
-      let zipHeader: ILocalFileHeader;
+      let zipHeader: ILocalFileHeader | undefined = undefined;
       if (this.entries) {
         // Use Central Director entry
         zipHeader = this.entries[entry];
         await this.tokenizer.ignore(LocalFileHeaderToken.len + zipHeader.filenameLength);
       } else {
-        try {
-          zipHeader = await this.tokenizer.readToken(LocalFileHeaderToken);
-          if (zipHeader.signature !== 0x04034b50) {
-            throw new Error(`Unexpected local-file-header-signature add position=${this.tokenizer.position - LocalFileHeaderToken.len}`);
-          }
-        } catch (error) {
-          if (error instanceof EndOfStreamError) break;
-          throw error;
+        const signature = await this.tokenizer.peekToken(UINT32_LE);
+        switch (signature) {
+          case Signature.LocalFileHeader:
+            zipHeader = await this.tokenizer.readToken(LocalFileHeaderToken);
+            zipHeader.filename = await this.tokenizer.readToken(new StringType(zipHeader.filenameLength, 'utf-8'));
+            break;
+          case Signature.CentralFileHeader:
+            break;
+          default:
+            throw new Error('Unexpected signature');
         }
-        zipHeader.filename = await this.tokenizer.readToken(new StringType(zipHeader.filenameLength, 'utf-8'));
+
+        if(!zipHeader)
+          return;
       }
       const next = fileCb(zipHeader);
       stop = !!next.stop;
@@ -145,9 +143,8 @@ export class ZipHandler {
       if (zipHeader.dataDescriptor && zipHeader.compressedSize === 0) {
         const chunks: Uint8Array[] = [];
         let len = syncBufferSize;
-        const ddSignatureArray = new Uint8Array(SignatureDataDescriptor)
 
-        debug('Compressed-file-size unknown, scanning for next local-file-header');
+        debug('Compressed-file-size unknown, scanning for next data-descriptor-signature....');
         let nextHeaderIndex = -1;
         while (nextHeaderIndex < 0 && len === syncBufferSize) {
 
@@ -166,23 +163,17 @@ export class ZipHandler {
             await this.tokenizer.ignore(size);
           }
         }
+        debug(`Found data-descriptor-signature at pos=${this.tokenizer.position}`);
         fileData = mergeArrays(chunks);
         // Set position to next ZIP header
       }
 
-      if (!fileData) {
-        fileData = new Uint8Array(zipHeader.compressedSize);
-        await this.tokenizer.readBuffer(fileData);
-      }
-
-      if (zipHeader.dataDescriptor) {
-        const dataDescriptor = await this.tokenizer.readToken(DataDescriptor);
-        if (dataDescriptor.signature !== 0x08074b50) {
-          throw new Error(`Expected data-descriptor-signature at position ${this.tokenizer.position - DataDescriptor.len}`);
-        }
-      }
-
       if (next.handler) {
+        if (!fileData) {
+          debug(`Reading compressed-file-data: ${zipHeader.compressedSize} bytes`);
+          fileData = new Uint8Array(zipHeader.compressedSize);
+          await this.tokenizer.readBuffer(fileData);
+        }
         // Extract file data
         if (!fileData)
           throw new Error('fileData should be assigned');
@@ -193,8 +184,23 @@ export class ZipHandler {
           const uncompressedData = decompressSync(fileData);
           await next.handler(uncompressedData);
         }
+      } else {
+        if (!fileData) {
+          debug(`Ignoring compressed-file-data: ${zipHeader.compressedSize} bytes`);
+          await this.tokenizer.ignore(zipHeader.compressedSize);
+        }
       }
+
+      debug(`Reading data-descriptor at pos=${this.tokenizer.position}`);
+      if (zipHeader.dataDescriptor) {
+        const dataDescriptor = await this.tokenizer.readToken(DataDescriptor);
+        if (dataDescriptor.signature !== 0x08074b50) {
+          throw new Error(`Expected data-descriptor-signature at position ${this.tokenizer.position - DataDescriptor.len}`);
+        }
+      }
+
       ++entry;
+      debug(`Completed file iteration at=${this.tokenizer.position}`);
     } while (!stop && (!this.entries || entry < this.entries.length));
   }
 }
