@@ -85,16 +85,18 @@ export class ZipHandler {
     if (offset > 0) {
       debug('Central-directory 32-bit signature found');
       const eocdHeader = await this.tokenizer.readToken(EndOfCentralDirectoryRecordToken, offset);
-      const files: IFileHeader[] = new Array(eocdHeader.nrOfEntriesOfSize);
-      (this.tokenizer as IRandomAccessTokenizer).setPosition(eocdHeader.offsetOfStartOfCd)
-      for (let n = 0; n < files.length; ++n) {
-        const entry = await this.tokenizer.readToken(FileHeader);
-        entry.filename = await this.tokenizer.readToken(new StringType(entry.filenameLength, 'utf-8'));
-        files[n] = entry;
-        debug(`Add central-directory file-entry: n=${n}/${files.length}: filename=${files[n].filename}`);
+      if (eocdHeader.signature === Signature.CentralFileHeader ) {
+        const files: IFileHeader[] = new Array(eocdHeader.nrOfEntriesOfSize);
+        (this.tokenizer as IRandomAccessTokenizer).setPosition(eocdHeader.offsetOfStartOfCd)
+        for (let n = 0; n < files.length; ++n) {
+          const entry = await this.tokenizer.readToken(FileHeader);
+          entry.filename = await this.tokenizer.readToken(new StringType(entry.filenameLength, 'utf-8'));
+          files[n] = entry;
+          debug(`Add central-directory file-entry: n=${n}/${files.length}: filename=${files[n].filename}`);
+        }
+        (this.tokenizer as IRandomAccessTokenizer).setPosition(pos);
+        return files;
       }
-      (this.tokenizer as IRandomAccessTokenizer).setPosition(pos);
-      return files;
     }
     (this.tokenizer as IRandomAccessTokenizer).setPosition(pos);
   }
@@ -118,6 +120,8 @@ export class ZipHandler {
             break;
           case Signature.CentralFileHeader:
             break;
+          case 0xE011CFD0:
+            throw new Error('Encrypted ZIP');
           default:
             throw new Error('Unexpected signature');
         }
@@ -149,9 +153,7 @@ export class ZipHandler {
         while (nextHeaderIndex < 0 && len === syncBufferSize) {
 
           len = await this.tokenizer.peekBuffer(this.syncBuffer, {mayBeLess: true});
-
           nextHeaderIndex = indexOf(this.syncBuffer.subarray(0, len), ddSignatureArray);
-
           const size = nextHeaderIndex >= 0 ? nextHeaderIndex : len;
 
           if (next.handler) {
