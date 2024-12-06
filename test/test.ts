@@ -7,6 +7,9 @@ import {ZipHandler} from "../lib/index.js";
 import {makeReadableByteFileStream} from "./util.js";
 import {createReadStream} from "node:fs";
 import type {ILocalFileHeader} from "../lib/ZipToken.js";
+import {makeChunkedTokenizerFromS3} from "@tokenizer/s3";
+import {MockS3Client} from "./S3ClientMockup.js";
+import type {S3Client} from "@aws-sdk/client-s3";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixturePath = join(__dirname, 'fixture');
@@ -37,6 +40,23 @@ async function extractFilesFromFixture(tokenizer: ITokenizer): Promise<IExtracte
   }
 }
 
+async function iterateFilesFromFixture(tokenizer: ITokenizer): Promise<ILocalFileHeader[]> {
+  try {
+    const zipHandler = new ZipHandler(tokenizer);
+    const files: ILocalFileHeader[] = [];
+    await zipHandler.unzip(zipFile => {
+      files.push(zipFile)
+      return {
+        handler: false,
+        stop: false
+      }
+    });
+    return files;
+  } finally {
+    await tokenizer.close();
+  }
+}
+
 async function makeFileTokenizer(fixture: string): Promise<IRandomAccessTokenizer> {
   return fromFile(join(fixturePath, fixture));
 }
@@ -51,9 +71,18 @@ async function makeWebStreamTokenizer(fixture: string): Promise<ITokenizer> {
   return fromWebStream(stream.stream);
 }
 
+async function makeS3Tokenizer(fixture: string): Promise<ITokenizer> {
+  const s3Client = new MockS3Client();
+
+  return await makeChunkedTokenizerFromS3(s3Client as unknown as S3Client, {
+    Bucket: 'mockup',
+    Key: fixture
+  });
+}
+
 async function checkContentTypesXml(tokenizer: ITokenizer): Promise<void> {
   const files = await extractFilesFromFixture(tokenizer);
-  assert.isDefined(files);
+  assert.isDefined(files, 'expect list of files');
   const filename = '[Content_Types].xml';
   const contentTypeFile = findFile(files, filename);
   assert.isDefined(contentTypeFile, `Find file "${filename}"`);
@@ -73,38 +102,34 @@ function getInflatedFileLength(files: IExtractedFile[], filename: string): numbe
 
 describe('Different ZIP encode options', () => {
 
-  describe('inflate a ZIP file with the \"data descriptor\" flag not set', () => {
+  it("No data-descriptor, with extra-field-length in local-file-header;", async () => {
+    const tokenizer = await makeFileTokenizer('fixture.docx');
+    await checkContentTypesXml(tokenizer);
+  });
 
-    it("inflate a ZIP file with the \"data descriptor\" flag disabled", async () => {
-      const tokenizer = await makeFileTokenizer('fixture.docx');
-      await checkContentTypesXml(tokenizer);
-    });
-
-    it("inflate fixture.xslx", async () => {
-      const tokenizer = await makeFileTokenizer('fixture.xlsx');
-      const files = await extractFilesFromFixture(tokenizer);
-      assert.isDefined(files);
-      const filename = '[Content_Types].xml';
-      const contentTypeFile = findFile(files, filename);
-      assert.isDefined(contentTypeFile, `Find file "${filename}"`);
-      assert.strictEqual(contentTypeFile.data.length, 1336);
-    });
-
+  it("inflate fixture.xslx", async () => {
+    const tokenizer = await makeFileTokenizer('fixture.xlsx');
+    const files = await extractFilesFromFixture(tokenizer);
+    assert.isDefined(files);
+    const filename = '[Content_Types].xml';
+    const contentTypeFile = findFile(files, filename);
+    assert.isDefined(contentTypeFile, `Find file "${filename}"`);
+    assert.strictEqual(contentTypeFile.data.length, 1336);
   });
 
   describe('inflate a ZIP file with the \"data descriptor\" flag set', () => {
 
-    it("from file: with random-read support", async () => {
+    it("from file (with random-read)", async () => {
       const tokenizer = await makeFileTokenizer('file_example_XLSX_10.xlsx');
       await checkContentTypesXml(tokenizer);
     });
 
-    it("from web-stream: without random-read support", async () => {
+    it("from web-stream (without random-read)", async () => {
       const tokenizer = await makeWebStreamTokenizer('file_example_XLSX_10.xlsx');
       await checkContentTypesXml(tokenizer);
     });
 
-    it("from Node.js-stream: without random-read support", async () => {
+    it("from Node.js-stream (without random-read)", async () => {
       const tokenizer = await makeNodeStreamTokenizer('file_example_XLSX_10.xlsx');
       await checkContentTypesXml(tokenizer);
     });
@@ -206,9 +231,15 @@ describe('Inflate somefile.csv.zip', () => {
     assert.strictEqual(getInflatedFileLength(files, 'somefile.csv'), 50);
   });
 
+  it("from S3 mockup", async () => {
+    const tokenizer = await makeS3Tokenizer('somefile.csv.zip');
+    const files = await extractFilesFromFixture(tokenizer);
+    assert.strictEqual(getInflatedFileLength(files, 'somefile.csv'), 50);
+  });
+
 });
 
 function assertFileIsXml(fileData: Uint8Array) {
   const xmlContent = new TextDecoder('utf-8').decode(fileData);
-  assert.strictEqual(xmlContent.indexOf("<?xml version=\"1.0\""), 0);
+  assert.strictEqual(xmlContent.indexOf("<?xml version=\"1.0\""), 0, 'Content is XML');
 }
