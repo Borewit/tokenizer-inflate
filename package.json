@@ -1,6 +1,6 @@
 {
   "name": "@tokenizer/inflate",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Tokenized zip support",
   "type": "module",
   "exports": "./lib/index.js",
