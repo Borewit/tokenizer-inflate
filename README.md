@@ -9,9 +9,11 @@
 The library provides a customizable way to parse ZIP archives and extract compressed data while minimizing memory usage.
 
 ## Features
-- Read and extract files from ZIP archives.
-- Filter files based on custom criteria using callback functions.
-- Handle extracted data using user-defined handlers.
+- Efficient Decompression: Handles streams compressed with DEFLATE and related formats (e.g., gzip).
+- Tokenizer Compatibility: Seamlessly integrates with [strtok3](https://github.com/Borewit/strtok3). For example, use  [@tokenizer/s3](https://github.com/Borewit/tokenizer-s3) for efficient partial extraction of a Zip stored on AWS S3 cloud file storage.
+- Streamlined Interface: Provides an intuitive API for working with compressed data in streaming and random-access scenarios.
+- Chunked Data Access: Leverages the underlying media's capabilities to offer chunked or random access to data, unlike traditional streams.
+- Plug-and-Play: Easily integrate with existing tokenizer-based workflows for parsing file metadata or binary structures.
 - Interrupt the extraction process conditionally.
 
 ## Installation
