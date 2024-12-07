@@ -68,7 +68,9 @@
     "unzip",
     "decompress",
     "inflate",
-    "strtok",
-    "tokenizer"
+    "strtok3",
+    "tokenizer",
+    "stream",
+    "S3"
   ]
 }
