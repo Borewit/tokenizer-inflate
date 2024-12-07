@@ -1605,7 +1605,6 @@ __metadata:
     del-cli: "npm:^6.0.0"
     fflate: "npm:^0.8.2"
     file-type: "npm:^19.6.0"
-    link: "npm:^2.1.1"
     mocha: "npm:^10.8.2"
     strtok3: "npm:^10.0.1"
     token-types: "npm:^6.0.0"
@@ -2584,15 +2583,6 @@ __metadata:
   version: 1.1.0
   resolution: "jsbn@npm:1.1.0"
   checksum: 10c0/4f907fb78d7b712e11dea8c165fe0921f81a657d3443dde75359ed52eb2b5d33ce6773d97985a089f09a65edd80b11cb75c767b57ba47391fee4c969f7215c96
-  languageName: node
-  linkType: hard
-
-"link@npm:^2.1.1":
-  version: 2.1.1
-  resolution: "link@npm:2.1.1"
-  bin:
-    link: dist/cli.js
-  checksum: 10c0/2ab956715e77c4fb9d78e16172301b59e2c03611feae4df33f50a70351445da050bea4010c682a0e187a09b5f2ee4462bab842153c2767a3b018de00b0e8282a
   languageName: node
   linkType: hard
 
