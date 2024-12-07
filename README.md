@@ -25,11 +25,11 @@ npm install @tokenizer/inflate
 
 The following example demonstrates how to use the library to extract .txt files and stop processing when encountering a .stop file.
 
-```ts
-import { ZipHandler, InflateFileFilter } from "@tokenizer/inflate";
-import { fromFile } from "strtok3";
+```js
+import { ZipHandler } from '@tokenizer/inflate';
+import { fromFile } from 'strtok3';
 
-const fileFilter: InflateFileFilter = (file) => {
+const fileFilter = (file) => {
   console.log(`Processing file: ${file.filename}`);
 
   if (file.filename?.endsWith(".stop")) {
@@ -49,34 +49,13 @@ const fileFilter: InflateFileFilter = (file) => {
   return { handler: false }; // Ignore other files
 };
 
-async function extractFiles(zipFilePath: string) {
+async function extractFiles(zipFilePath) {
   const tokenizer = await fromFile(zipFilePath);
   const zipHandler = new ZipHandler(tokenizer);
-
   await zipHandler.unzip(fileFilter);
 }
 
-extractFiles("example.zip").catch(console.error);
-
-```
-
-### Example: Custom File Handling
-Define custom logic to handle specific files or stop extraction based on file attributes.
-
-```ts
-const fileFilter: InflateFileFilter = (file) => {
-  if (file.filename?.endsWith(".log")) {
-    return {
-      handler: async (data) => {
-        console.log(`Processing log file: ${file.filename}`);
-        const content = new TextDecoder().decode(data);
-        console.log(content);
-      },
-    };
-  }
-
-  return { handler: false }; // Skip other files
-};
+extractFiles('example.zip').catch(console.error);
 ```
 
 ## API
