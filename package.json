@@ -33,7 +33,7 @@
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.705.0",
     "@biomejs/biome": "=1.9.4",
-    "@tokenizer/s3": "^0.5.1",
+    "@tokenizer/s3": "^1.0.0",
     "@types/chai": "^5.0.1",
     "@types/debug": "^4",
     "@types/mocha": "^10.0.10",
