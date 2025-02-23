@@ -1472,7 +1472,6 @@ __metadata:
     chai: "npm:^5.2.0"
     debug: "npm:^4.4.0"
     del-cli: "npm:^6.0.0"
-    fflate: "npm:^0.8.2"
     file-type: "npm:^20.1.0"
     mocha: "npm:^11.1.0"
     strtok3: "npm:^10.2.1"
@@ -2055,13 +2054,6 @@ __metadata:
   dependencies:
     reusify: "npm:^1.0.4"
   checksum: 10c0/1095f16cea45fb3beff558bb3afa74ca7a9250f5a670b65db7ed585f92b4b48381445cd328b3d87323da81e43232b5d5978a8201bde84e0cd514310f1ea6da34
-  languageName: node
-  linkType: hard
-
-"fflate@npm:^0.8.2":
-  version: 0.8.2
-  resolution: "fflate@npm:0.8.2"
-  checksum: 10c0/03448d630c0a583abea594835a9fdb2aaf7d67787055a761515bf4ed862913cfd693b4c4ffd5c3f3b355a70cf1e19033e9ae5aedcca103188aaff91b8bd6e293
   languageName: node
   linkType: hard
 
