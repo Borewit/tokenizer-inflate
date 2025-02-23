@@ -1475,7 +1475,7 @@ __metadata:
     fflate: "npm:^0.8.2"
     file-type: "npm:^20.1.0"
     mocha: "npm:^11.1.0"
-    strtok3: "npm:^10.0.1"
+    strtok3: "npm:^10.2.1"
     token-types: "npm:^6.0.0"
     ts-node: "npm:^10.9.2"
     typescript: "npm:^5.7.3"
@@ -3034,7 +3034,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"strtok3@npm:^10.2.0":
+"strtok3@npm:^10.2.0, strtok3@npm:^10.2.1":
   version: 10.2.1
   resolution: "strtok3@npm:10.2.1"
   dependencies:
