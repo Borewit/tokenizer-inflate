@@ -2,7 +2,7 @@ import { it } from 'mocha';
 import { assert } from 'chai';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { fromFile, fromStream, fromWebStream, type IRandomAccessTokenizer, type ITokenizer } from 'strtok3';
+import {fromBuffer, fromFile, fromStream, fromWebStream, type IRandomAccessTokenizer, type ITokenizer} from 'strtok3';
 import { makeReadableByteFileStream, isTarHeaderChecksumMatches } from "./util.js";
 import { createReadStream } from "node:fs";
 import { makeChunkedTokenizerFromS3 } from "@tokenizer/s3";
@@ -325,6 +325,52 @@ describe("Inflate Gunzip", () => {
     }
     return false;
   }
+
+  it('Inflate gunzip file', async () => {
+    const tokenizer = await makeFileTokenizer('simple.txt.gz');
+    const gzipHandler = new GzipHandler(tokenizer);
+    const readableStream = gzipHandler.inflate();
+    const reader = readableStream.getReader();
+    let decodedResult = await reader.read();
+    assert.strictEqual(decodedResult.done, false, 'decodedResult.done');
+    const decodedText = new TextDecoder('ascii').decode(decodedResult.value);
+    assert.strictEqual(decodedText,'Lorem ipsum dolor sit amet, consectetur adipiscing elit. \n' +
+      'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n', 'decoded text');
+    decodedResult = await reader.read();
+    assert.strictEqual(decodedResult.done, true, 'decodedResult.done');
+  });
+
+  it('Inflate partial file', async () => {
+    const buf = Uint8Array.from([31, 139, 8, 8, 137, 83, 29, 82, 0, 11]);
+    const tokenizer = fromBuffer(buf);
+
+    try {
+      const gzipHandler = new GzipHandler(tokenizer);
+      const reader = gzipHandler.inflate().getReader();
+
+      let threw = false;
+      try {
+        await reader.read();
+      } catch (err) {
+        threw = true;
+
+        // Biome-friendly: treat err as unknown
+        const e = err as unknown;
+
+        if (!(e instanceof Error)) {
+          throw new Error(`Expected a decompression Error, got: ${String(e)}`);
+        }
+
+        // no message assertions (Node 20 sometimes returns an empty message)
+        assert.instanceOf(e, Error, 'expected a decompression error');
+      }
+
+      assert.isTrue(threw, 'expected reader.read() to throw for partial gzip');
+
+    } finally {
+      await tokenizer.close();
+    }
+  });
 
   it('Inflate small tar.gz file', async () => {
     const tokenizer = await makeFileTokenizer('fixture-gnu.tgz');

@@ -1,6 +1,5 @@
 import type { IRandomAccessTokenizer, ITokenizer } from 'strtok3';
 import { StringType, UINT32_LE } from 'token-types';
-import { decompressSync } from 'fflate';
 import initDebug from 'debug';
 import {
   DataDescriptor,
@@ -190,13 +189,53 @@ export class ZipHandler {
     }
   }
 
-  private inflate(zipHeader: ILocalFileHeader, fileData: Uint8Array, cb: InflatedDataHandler): Promise<void> {
+  private async inflate(
+    zipHeader: ILocalFileHeader,
+    fileData: Uint8Array,
+    cb: InflatedDataHandler
+  ): Promise<void> {
+
     if (zipHeader.compressedMethod === 0) {
+      // Stored (uncompressed)
       return cb(fileData);
     }
+
+    if (zipHeader.compressedMethod !== 8) {
+      throw new Error(`Unsupported ZIP compression method: ${zipHeader.compressedMethod}`);
+    }
+
     debug(`Decompress filename=${zipHeader.filename}, compressed-size=${fileData.length}`);
-    const uncompressedData = decompressSync(fileData);
+
+    const uncompressedData = await ZipHandler.decompressDeflateRaw(fileData);
     return cb(uncompressedData);
+  }
+
+  private static async decompressDeflateRaw(data: Uint8Array): Promise<Uint8Array> {
+    // Wrap Uint8Array in a ReadableStream without copying
+    const input = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(data);
+        controller.close();
+      }
+    });
+
+    const ds = new DecompressionStream("deflate-raw");
+    const output = input.pipeThrough(ds as unknown as ReadableWritablePair<Uint8Array, Uint8Array>);
+
+    try {
+      // Collect decompressed bytes from the output stream
+      const response = new Response(output);
+      const buffer = await response.arrayBuffer();
+      return new Uint8Array(buffer);
+    } catch (err: unknown) {
+      // Provide ZIP-specific error context
+      const message =
+        err instanceof Error
+          ? `Failed to deflate ZIP entry: ${err.message}`
+          : "Unknown decompression error in ZIP entry";
+
+      throw new TypeError(message);
+    }
   }
 
   private async readLocalFileHeader(): Promise<ILocalFileHeader | false> {
