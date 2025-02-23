@@ -1464,7 +1464,7 @@ __metadata:
   dependencies:
     "@aws-sdk/client-s3": "npm:^3.750.0"
     "@biomejs/biome": "npm:=1.9.4"
-    "@tokenizer/s3": "npm:^1.0.0"
+    "@tokenizer/s3": "npm:^1.0.1"
     "@types/chai": "npm:^5.0.1"
     "@types/debug": "npm:^4"
     "@types/mocha": "npm:^10.0.10"
@@ -1482,26 +1482,26 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@tokenizer/range@npm:^0.12.0":
-  version: 0.12.0
-  resolution: "@tokenizer/range@npm:0.12.0"
+"@tokenizer/range@npm:^0.13.0":
+  version: 0.13.0
+  resolution: "@tokenizer/range@npm:0.13.0"
   dependencies:
-    debug: "npm:^4.3.7"
-    strtok3: "npm:^9.1.1"
-  checksum: 10c0/a140a7159233908c58bbba02adf81e85e91a8540d571974f97f98ea56001a81bb0b56b2f473ea7eea1155580ada7931e5e4774cc84f25aa96632622a39cac8ac
+    debug: "npm:^4.4.0"
+    strtok3: "npm:^10.2.0"
+  checksum: 10c0/4a6a457f022624bb99ec3d52f79fe01943c3a920f1bbea6c0305f9c2795ec9c6695d8f152851365cc7bd7ec24781ee15aabf67824499b68bbc220756e05fa4b0
   languageName: node
   linkType: hard
 
-"@tokenizer/s3@npm:^1.0.0":
-  version: 1.0.0
-  resolution: "@tokenizer/s3@npm:1.0.0"
+"@tokenizer/s3@npm:^1.0.1":
+  version: 1.0.1
+  resolution: "@tokenizer/s3@npm:1.0.1"
   dependencies:
-    "@tokenizer/range": "npm:^0.12.0"
-    strtok3: "npm:^10.0.1"
+    "@tokenizer/range": "npm:^0.13.0"
+    strtok3: "npm:^10.2.0"
   peerDependencies:
     "@aws-sdk/client-s3": ">=3.0.0 <4.0.0"
     "@aws-sdk/credential-providers": ">=3.0.0 <4.0.0"
-  checksum: 10c0/236bc55338cee56a00fabcb198a9bd7d25d4710a467fb2d02b5c30c5ca0d13a0459bf41ee6f59424a3f5f499786971242a972948ef5a3fc821a735a278525f1c
+  checksum: 10c0/8a3973cb0f34867bebfd6a5b9bddc828770d2d9b5100a2606ccfe3a57d85b34779aab925833546030a4bbd1217000aab3fe7c7c4eca2124010490a94a1f497df
   languageName: node
   linkType: hard
 
@@ -1881,7 +1881,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"debug@npm:4, debug@npm:^4.3.4, debug@npm:^4.3.5, debug@npm:^4.3.7":
+"debug@npm:4, debug@npm:^4.3.4, debug@npm:^4.3.5":
   version: 4.3.7
   resolution: "debug@npm:4.3.7"
   dependencies:
@@ -3041,16 +3041,6 @@ __metadata:
     "@tokenizer/token": "npm:^0.3.0"
     peek-readable: "npm:^6.1.1"
   checksum: 10c0/864d88358c1cbca5c1a4538e74189ea89e0ed89d46cafe82178a2bb8b2bf22d5882da711fe73e9eaacad9cf1a3f875aa5a666900f3b0af6a7f5d8d94b211af1f
-  languageName: node
-  linkType: hard
-
-"strtok3@npm:^9.1.1":
-  version: 9.1.1
-  resolution: "strtok3@npm:9.1.1"
-  dependencies:
-    "@tokenizer/token": "npm:^0.3.0"
-    peek-readable: "npm:^5.3.1"
-  checksum: 10c0/ef9cd2a6cd21aec368c7f6fbd1d93548adc2c5b69ee28fa9a4b4e8fb6be6e539f3fcdf21107196e0c3fdff1c433db7e5d0fb8cab132c0b013ed9eef220bdcf2f
   languageName: node
   linkType: hard
 
