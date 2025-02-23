@@ -192,9 +192,9 @@ export class ZipHandler {
     if (zipHeader.compressedMethod === 0) {
       return cb(fileData);
     }
-      debug(`Decompress filename=${zipHeader.filename}, compressed-size=${fileData.length}`);
-      const uncompressedData = decompressSync(fileData);
-      return cb(uncompressedData);
+    debug(`Decompress filename=${zipHeader.filename}, compressed-size=${fileData.length}`);
+    const uncompressedData = decompressSync(fileData);
+    return cb(uncompressedData);
   }
 
   private async readLocalFileHeader(): Promise<ILocalFileHeader | false> {
