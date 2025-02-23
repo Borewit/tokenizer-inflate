@@ -1,6 +1,5 @@
 import type {IRandomAccessTokenizer, ITokenizer} from 'strtok3';
 import {StringType, UINT32_LE} from 'token-types';
-import {decompressSync} from 'fflate';
 import initDebug from 'debug';
 import {
   DataDescriptor,
@@ -188,13 +187,38 @@ export class ZipHandler {
     }
   }
 
-  private inflate(zipHeader: ILocalFileHeader, fileData: Uint8Array, cb: InflatedDataHandler): Promise<void> {
+  private async inflate(zipHeader: ILocalFileHeader, fileData: Uint8Array, cb: InflatedDataHandler): Promise<void> {
     if (zipHeader.compressedMethod === 0) {
       return cb(fileData);
     }
+    let method: CompressionFormat;
+    switch(zipHeader.compressedMethod) {
+      case 8:
+        method = 'deflate-raw';
+        break;
+      default:
+        throw new Error('Unsupported compression method');
+    }
     debug(`Decompress filename=${zipHeader.filename}, compressed-size=${fileData.length}`);
-    const uncompressedData = decompressSync(fileData);
+    const uncompressedData = await ZipHandler.decompressUint8Array(fileData, method);
     return cb(uncompressedData);
+  }
+
+  private static async decompressUint8Array(compressedData: Uint8Array, format: CompressionFormat): Promise<Uint8Array> {
+    // Convert Uint8Array to a Blob
+    const blob = new Blob([compressedData]);
+
+    // Create a ReadableStream from the Blob
+    const stream = blob.stream();
+
+    // Use DecompressionStream to decompress the data
+    const decompressionStream = new DecompressionStream(format);
+    const decompressedStream = stream.pipeThrough(decompressionStream);
+
+    // Convert the decompressed stream back into a Uint8Array
+    const response = new Response(decompressedStream);
+    const decompressedArrayBuffer = await response.arrayBuffer();
+    return new Uint8Array(decompressedArrayBuffer);
   }
 
   private async readLocalFileHeader(): Promise<ILocalFileHeader | false> {

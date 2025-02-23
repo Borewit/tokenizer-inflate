@@ -48,7 +48,6 @@
   },
   "dependencies": {
     "debug": "^4.4.0",
-    "fflate": "^0.8.2",
     "token-types": "^6.0.0"
   },
   "repository": {
