@@ -1465,10 +1465,10 @@ __metadata:
     "@aws-sdk/client-s3": "npm:^3.787.0"
     "@biomejs/biome": "npm:=1.9.4"
     "@tokenizer/s3": "npm:^1.0.1"
-    "@types/chai": "npm:^5.2.0"
+    "@types/chai": "npm:^5.2.1"
     "@types/debug": "npm:^4"
     "@types/mocha": "npm:^10.0.10"
-    "@types/node": "npm:^22.13.10"
+    "@types/node": "npm:^22.15.2"
     chai: "npm:^5.2.0"
     debug: "npm:^4.4.0"
     del-cli: "npm:^6.0.0"
@@ -1540,12 +1540,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/chai@npm:^5.2.0":
-  version: 5.2.0
-  resolution: "@types/chai@npm:5.2.0"
+"@types/chai@npm:^5.2.1":
+  version: 5.2.1
+  resolution: "@types/chai@npm:5.2.1"
   dependencies:
     "@types/deep-eql": "npm:*"
-  checksum: 10c0/7eda3feab531bded0e9be35ea165c05946cc683ef3c4e807fc27e073021e3751e9467ab1c38a2f6a10786f236593978bbdc02e48b3589265f28fdc4ceebe879d
+  checksum: 10c0/f8a03c9f8450b7ab8df11f658c4194be17a6316b870490d5ffaf5289a3c0c0591ed6291b2d6551e181887c3eed89d0490744b3e569d9b23cf611b05f93e775b6
   languageName: node
   linkType: hard
 
@@ -1579,12 +1579,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^22.13.10":
-  version: 22.13.10
-  resolution: "@types/node@npm:22.13.10"
+"@types/node@npm:^22.15.2":
+  version: 22.15.2
+  resolution: "@types/node@npm:22.15.2"
   dependencies:
-    undici-types: "npm:~6.20.0"
-  checksum: 10c0/a3865f9503d6f718002374f7b87efaadfae62faa499c1a33b12c527cfb9fd86f733e1a1b026b80c5a0e4a965701174bc3305595a7d36078aa1abcf09daa5dee9
+    undici-types: "npm:~6.21.0"
+  checksum: 10c0/39da31d5fc63b14fabd217bb8a921c4a7fc3d99f233440209f9fc2d5d736e8773f7efc65223e2fd0e8db8390b0baab9c0cd2e951c2ece8b237f07313ab3cf295
   languageName: node
   linkType: hard
 
@@ -3167,10 +3167,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"undici-types@npm:~6.20.0":
-  version: 6.20.0
-  resolution: "undici-types@npm:6.20.0"
-  checksum: 10c0/68e659a98898d6a836a9a59e6adf14a5d799707f5ea629433e025ac90d239f75e408e2e5ff086afc3cace26f8b26ee52155293564593fbb4a2f666af57fc59bf
+"undici-types@npm:~6.21.0":
+  version: 6.21.0
+  resolution: "undici-types@npm:6.21.0"
+  checksum: 10c0/c01ed51829b10aa72fc3ce64b747f8e74ae9b60eafa19a7b46ef624403508a54c526ffab06a14a26b3120d055e1104d7abe7c9017e83ced038ea5cf52f8d5e04
   languageName: node
   linkType: hard
 
