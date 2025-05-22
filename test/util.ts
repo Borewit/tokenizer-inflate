@@ -1,6 +1,7 @@
 import * as fs from 'node:fs/promises';
 import { ReadableStream } from 'node:stream/web';
-import { Readable } from 'node:stream';
+import { StringType } from 'token-types';
+import type { ITokenizer } from 'strtok3';
 
 export async function makeReadableByteFileStream(filename: string, delay = 0): Promise<{ stream: ReadableStream<Uint8Array>, closeFile: () => Promise<void> }> {
 
@@ -48,51 +49,57 @@ export async function makeReadableByteFileStream(filename: string, delay = 0): P
   };
 }
 
-export class DelayedStream extends Readable {
+export async function isTarHeaderChecksumMatches(tokenizer: ITokenizer): Promise<boolean> {
+  const blockSize = 512;
+  const typeFlagOffset = 156;
 
-  private buffer: (Uint8Array | null)[];
-  private isReading: boolean;
-  private path: string | undefined;
+  while (true) {
+    const header = new Uint8Array(blockSize);
+    const size = await tokenizer.peekBuffer(header, { mayBeLess: true });
 
-  constructor(private sourceStream: Readable, private delay = 0) {
-    super();
-    this.path = (sourceStream as unknown as {path: string}).path;
-    this.buffer = [];
-    this.isReading = false;
-
-    this.sourceStream.on('data', (chunk) => {
-      this.buffer.push(chunk);
-      this.emitDelayed();
-    });
-
-    this.sourceStream.on('end', () => {
-      this.buffer.push(null); // Signal the end of the stream
-      this.emitDelayed();
-    });
-  }
-
-  _read() {
-    if (!this.isReading && this.buffer.length > 0) {
-      this.emitDelayed();
+    if (size < blockSize) {
+      break;
     }
-  }
 
-  emitDelayed() {
-    if (this.isReading) return;
-
-    if (this.buffer.length > 0) {
-      this.isReading = true;
-      const chunk = this.buffer.shift();
-
-      setTimeout(() => {
-        this.push(chunk);
-        this.isReading = false;
-
-        if (this.buffer.length > 0) {
-          this.emitDelayed();
-        }
-      }, this.delay);
+    if (header.every(byte => byte === 0)) {
+      break;
     }
+
+    const typeflag = String.fromCharCode(header[typeFlagOffset]);
+
+    const rawSumStr = new StringType(8, 'ascii').get(header, 148);
+    const cleanedSumStr = rawSumStr.replace(/\0.*$/, '').trim();
+
+    if (cleanedSumStr === '') {
+      await tokenizer.ignore(blockSize);
+      continue;
+    }
+
+    const readSum = Number.parseInt(cleanedSumStr, 8);
+
+    if (Number.isNaN(readSum)) {
+      await tokenizer.ignore(blockSize);
+      continue;
+    }
+
+    let sum = 0;
+    for (let i = 0; i < blockSize; i++) {
+      sum += (i >= 148 && i < 156) ? 0x20 : header[i];
+    }
+
+    if (readSum === sum) {
+      if (typeflag !== 'g' && typeflag !== 'x') {
+        return true;  // Found valid regular header
+      }
+    }
+
+    await tokenizer.ignore(blockSize);
   }
+
+  return false;
 }
 
+export function isTarHeaderBySignature(arrayBuffer: Uint8Array, offset = 0) {
+  const magicBytes = new StringType(6, 'ascii').get(arrayBuffer, 257);
+  return magicBytes === 'ustar\0' || magicBytes === 'ustar '; // POSIX or GNU variant
+}
