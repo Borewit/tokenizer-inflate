@@ -40,23 +40,6 @@ async function extractFilesFromFixture(tokenizer: ITokenizer): Promise<IExtracte
   }
 }
 
-async function iterateFilesFromFixture(tokenizer: ITokenizer): Promise<ILocalFileHeader[]> {
-  try {
-    const zipHandler = new ZipHandler(tokenizer);
-    const files: ILocalFileHeader[] = [];
-    await zipHandler.unzip(zipFile => {
-      files.push(zipFile)
-      return {
-        handler: false,
-        stop: false
-      }
-    });
-    return files;
-  } finally {
-    await tokenizer.close();
-  }
-}
-
 async function makeFileTokenizer(fixture: string): Promise<IRandomAccessTokenizer> {
   return fromFile(join(fixturePath, fixture));
 }
