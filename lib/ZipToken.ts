@@ -31,14 +31,13 @@ export interface ILocalFileHeader extends IDataDescriptor {
 
 export const DataDescriptor: IGetToken<IDataDescriptor> = {
   get(array: Uint8Array): IDataDescriptor {
-    const flags = UINT16_LE.get(array, 6)
     return {
       signature: UINT32_LE.get(array, 0),
       compressedSize: UINT32_LE.get(array, 8),
       uncompressedSize: UINT32_LE.get(array, 12),
     }
   }, len: 16
-}
+};
 
 /**
  * First part of the ZIP Local File Header
@@ -73,7 +72,7 @@ export const LocalFileHeaderToken: IGetToken<ILocalFileHeader> = {
       filename: null as unknown as string
     }
   }, len: 30
-}
+};
 
 interface I64EndOfCentralDirectoryRecord {
   signature: number,
@@ -123,7 +122,7 @@ export const EndOfCentralDirectoryRecordToken: IGetToken<IEndOfCentralDirectoryR
       zipFileCommentLength: UINT16_LE.get(array, 20),
     }
   }, len: 22
-}
+};
 
 export interface IFileHeader extends ILocalFileHeader {
   fileCommentLength: number;
@@ -169,4 +168,4 @@ export const FileHeader: IGetToken<IFileHeader> = {
       filename: null as unknown as string
     }
   }, len: 46
-}
+};

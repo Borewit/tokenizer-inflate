@@ -1,15 +1,15 @@
-import {it} from 'mocha';
-import {assert} from 'chai';
-import {dirname, join} from 'node:path';
-import {fileURLToPath} from 'node:url';
-import {fromFile, fromStream, fromWebStream, type IRandomAccessTokenizer, type ITokenizer} from 'strtok3';
-import {ZipHandler} from "../lib/index.js";
-import {makeReadableByteFileStream} from "./util.js";
-import {createReadStream} from "node:fs";
-import type {ILocalFileHeader} from "../lib/ZipToken.js";
-import {makeChunkedTokenizerFromS3} from "@tokenizer/s3";
-import {MockS3Client} from "./S3ClientMockup.js";
-import type {S3Client} from "@aws-sdk/client-s3";
+import { it } from 'mocha';
+import { assert } from 'chai';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { fromFile, fromStream, fromWebStream, type IRandomAccessTokenizer, type ITokenizer } from 'strtok3';
+import { makeReadableByteFileStream, isTarHeaderChecksumMatches } from "./util.js";
+import { createReadStream } from "node:fs";
+import { makeChunkedTokenizerFromS3 } from "@tokenizer/s3";
+import { MockS3Client } from "./S3ClientMockup.js";
+import type { S3Client } from "@aws-sdk/client-s3";
+
+import { ZipHandler, type ILocalFileHeader, GzipHandler } from "../lib/index.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixturePath = join(__dirname, 'fixture');
@@ -32,7 +32,7 @@ async function extractFilesFromFixture(tokenizer: ITokenizer): Promise<IExtracte
           });
         },
         stop: false
-      }
+      };
     });
     return files;
   } finally {
@@ -306,3 +306,48 @@ function assertFileIsXml(fileData: Uint8Array) {
   const xmlContent = new TextDecoder('utf-8').decode(fileData);
   assert.strictEqual(xmlContent.indexOf("<?xml version=\"1.0\""), 0, 'Content is XML');
 }
+
+describe("Inflate Gunzip", () => {
+
+  async function isTarGz(tokenizer: ITokenizer): Promise<boolean> {
+    const handler = new GzipHandler(tokenizer);
+
+    const stream = handler.inflate();
+    try {
+      const dataTokenizer = fromWebStream(stream);
+      try {
+        return await isTarHeaderChecksumMatches(dataTokenizer);
+      } finally {
+        await dataTokenizer.close();
+      }
+    } finally {
+      await stream.cancel();
+    }
+    return false;
+  }
+
+  it('Inflate small tar.gz file', async () => {
+    const tokenizer = await makeFileTokenizer('fixture-gnu.tgz');
+    try {
+      assert.isTrue(await isTarGz(tokenizer));
+    } finally {
+      await tokenizer.close();
+    }
+  });
+
+  it('Inflate large tar.gz file', async () => {
+    const result = await fetch("https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.7.12.tar.gz");
+    assert.ok(result.ok, 'HTTP request is ok');
+    if (result.body !== null) {
+      const tokenizer = fromWebStream(result.body);
+      try {
+        assert.isTrue(await isTarGz(tokenizer));
+      } finally {
+        await tokenizer.close();
+      }
+    } else {
+      assert.fail('Could not stream HTTP result');
+    }
+  });
+
+});
