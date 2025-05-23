@@ -15,8 +15,8 @@
     "compile": "yarn run compile-src && yarn run compile-test",
     "build": "yarn run clean && yarn run compile",
     "eslint": "eslint lib test",
-    "lint-md": "remark -u preset-lint-recommended .",
-    "lint-ts": "biome check",
+    "lint:md": "remark -u preset-lint-recommended .",
+    "lint:ts": "biome check",
     "fix": "yarn run biome lint --write",
     "test": "mocha",
     "start": "yarn run compile && yarn run lint && yarn run cover-test"
