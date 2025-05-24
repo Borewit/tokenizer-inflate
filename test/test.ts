@@ -104,42 +104,68 @@ describe('Different ZIP encode options', () => {
 
     it("from file (with random-read)", async () => {
       const tokenizer = await makeFileTokenizer('file_example_XLSX_10.xlsx');
-      await checkContentTypesXml(tokenizer);
+      try {
+        await checkContentTypesXml(tokenizer);
+
+      } finally {
+        await tokenizer.close();
+      }
     });
 
     it("from web-stream (without random-read)", async () => {
       const tokenizer = await makeWebStreamTokenizer('file_example_XLSX_10.xlsx');
-      await checkContentTypesXml(tokenizer);
+      try {
+        await checkContentTypesXml(tokenizer);
+
+      } finally {
+        await tokenizer.close();
+      }
     });
 
     it("from Node.js-stream (without random-read)", async () => {
       const tokenizer = await makeNodeStreamTokenizer('file_example_XLSX_10.xlsx');
-      await checkContentTypesXml(tokenizer);
+      try {
+        await checkContentTypesXml(tokenizer);
+      } finally {
+        await tokenizer.close();
+      }
     });
 
   });
 
   it("extract uncompressed data", async () => {
     const tokenizer = await makeFileTokenizer('fixture.odp');
-    const files = await extractFilesFromFixture(tokenizer);
-    const filename = 'mimetype';
-    const file = findFile(files, filename);
-    assert.isDefined(file, `Find file "${filename}"`);
-    const text = new TextDecoder('utf-8').decode(file.data);
-    assert.isDefined(file.data, 'file.data');
-    assert.strictEqual(text, 'application/vnd.oasis.opendocument.presentation')
+    try {
+      const files = await extractFilesFromFixture(tokenizer);
+      const filename = 'mimetype';
+      const file = findFile(files, filename);
+      assert.isDefined(file, `Find file "${filename}"`);
+      const text = new TextDecoder('utf-8').decode(file.data);
+      assert.isDefined(file.data, 'file.data');
+      assert.strictEqual(text, 'application/vnd.oasis.opendocument.presentation');
+    } finally {
+      await tokenizer.close();
+    }
   });
 
   it("inflate deflate", async () => {
     const tokenizer = await makeFileTokenizer('sample-deflate.zip');
-    const files = await extractFilesFromFixture(tokenizer);
-    assert.strictEqual(getInflatedFileLength(files, 'sample3.doc'), 15684);
+    try {
+      const files = await extractFilesFromFixture(tokenizer);
+      assert.strictEqual(getInflatedFileLength(files, 'sample3.doc'), 15684);
+    } finally {
+      await tokenizer.close();
+    }
   });
 
   it("inflate deflate64", async () => {
     const tokenizer = await makeFileTokenizer('sample-deflate64.zip');
-    const files = await extractFilesFromFixture(tokenizer);
-    assert.strictEqual(getInflatedFileLength(files, 'sample3.doc'), 15684);
+    try {
+      const files = await extractFilesFromFixture(tokenizer);
+      assert.strictEqual(getInflatedFileLength(files, 'sample3.doc'), 15684);
+    } finally {
+      await tokenizer.close();
+    }
   });
 
 });
@@ -148,26 +174,43 @@ describe('Inflate some zip files', () => {
 
   it("inflate sample-4", async () => {
     const tokenizer = await makeFileTokenizer('sample-zip-files-sample-4.zip');
-    const files = await extractFilesFromFixture(tokenizer);
-    assert.strictEqual(getInflatedFileLength(files, 'sample1.doc'), 9779);
+    try {
+      const files = await extractFilesFromFixture(tokenizer);
+      assert.strictEqual(getInflatedFileLength(files, 'sample1.doc'), 9779);
+    } finally {
+      await tokenizer.close();
+    }
+
   });
 
   it("inflate sample-5", async () => {
     const tokenizer = await makeFileTokenizer('sample-zip-files-sample-5.zip');
-    const files = await extractFilesFromFixture(tokenizer);
-    assert.strictEqual(getInflatedFileLength(files, 'sample2.doc'), 10199);
+    try {
+      const files = await extractFilesFromFixture(tokenizer);
+      assert.strictEqual(getInflatedFileLength(files, 'sample2.doc'), 10199);
+    } finally {
+      await tokenizer.close();
+    }
   });
 
   it("inflate sample-6", async () => {
     const tokenizer = await makeFileTokenizer('sample-zip-files-sample-6.zip');
-    const files = await extractFilesFromFixture(tokenizer);
-    assert.strictEqual(getInflatedFileLength(files, 'sample3.doc'), 15684);
+    try {
+      const files = await extractFilesFromFixture(tokenizer);
+      assert.strictEqual(getInflatedFileLength(files, 'sample3.doc'), 15684);
+    } finally {
+      await tokenizer.close();
+    }
   });
 
   it("inflate deflate64", async () => {
     const tokenizer = await makeFileTokenizer('sample-deflate64.zip');
-    const files = await extractFilesFromFixture(tokenizer);
-    assert.strictEqual(getInflatedFileLength(files, 'sample3.doc'), 15684);
+    try {
+      const files = await extractFilesFromFixture(tokenizer);
+      assert.strictEqual(getInflatedFileLength(files, 'sample3.doc'), 15684);
+    } finally {
+      await tokenizer.close();
+    }
   });
 
 });
@@ -176,20 +219,32 @@ describe('Inflate fixture.zip', () => {
 
   it("from file", async () => {
     const tokenizer = await makeFileTokenizer('fixture.zip');
-    const files = await extractFilesFromFixture(tokenizer);
-    assert.strictEqual(getInflatedFileLength(files, 'test.jpg'), 2248);
+    try {
+      const files = await extractFilesFromFixture(tokenizer);
+      assert.strictEqual(getInflatedFileLength(files, 'test.jpg'), 2248);
+    } finally {
+      await tokenizer.close();
+    }
   });
 
   it("from web-stream", async () => {
     const tokenizer = await makeWebStreamTokenizer('fixture.zip');
-    const files = await extractFilesFromFixture(tokenizer);
-    assert.strictEqual(getInflatedFileLength(files, 'test.jpg'), 2248);
+    try {
+      const files = await extractFilesFromFixture(tokenizer);
+      assert.strictEqual(getInflatedFileLength(files, 'test.jpg'), 2248);
+    } finally {
+      await tokenizer.close();
+    }
   });
 
   it("from Node.js-stream", async () => {
     const tokenizer = await makeNodeStreamTokenizer('fixture.zip');
-    const files = await extractFilesFromFixture(tokenizer);
-    assert.strictEqual(getInflatedFileLength(files, 'test.jpg'), 2248);
+    try {
+      const files = await extractFilesFromFixture(tokenizer);
+      assert.strictEqual(getInflatedFileLength(files, 'test.jpg'), 2248);
+    } finally {
+      await tokenizer.close();
+    }
   });
 
 });
@@ -198,26 +253,42 @@ describe('Inflate somefile.csv.zip', () => {
 
   it("from file", async () => {
     const tokenizer = await makeFileTokenizer('somefile.csv.zip');
-    const files = await extractFilesFromFixture(tokenizer);
-    assert.strictEqual(getInflatedFileLength(files, 'somefile.csv'), 50);
+    try {
+      const files = await extractFilesFromFixture(tokenizer);
+      assert.strictEqual(getInflatedFileLength(files, 'somefile.csv'), 50);
+    } finally {
+      await tokenizer.close();
+    }
   });
 
   it("from Node.js-stream", async () => {
     const tokenizer = await makeNodeStreamTokenizer('somefile.csv.zip');
-    const files = await extractFilesFromFixture(tokenizer);
-    assert.strictEqual(getInflatedFileLength(files, 'somefile.csv'), 50);
+    try {
+      const files = await extractFilesFromFixture(tokenizer);
+      assert.strictEqual(getInflatedFileLength(files, 'somefile.csv'), 50);
+    } finally {
+      await tokenizer.close();
+    }
   });
 
   it("from web-stream", async () => {
     const tokenizer = await makeWebStreamTokenizer('somefile.csv.zip');
-    const files = await extractFilesFromFixture(tokenizer);
-    assert.strictEqual(getInflatedFileLength(files, 'somefile.csv'), 50);
+    try {
+      const files = await extractFilesFromFixture(tokenizer);
+      assert.strictEqual(getInflatedFileLength(files, 'somefile.csv'), 50);
+    } finally {
+      await tokenizer.close();
+    }
   });
 
   it("from S3 mockup", async () => {
     const tokenizer = await makeS3Tokenizer('somefile.csv.zip');
-    const files = await extractFilesFromFixture(tokenizer);
-    assert.strictEqual(getInflatedFileLength(files, 'somefile.csv'), 50);
+    try {
+      const files = await extractFilesFromFixture(tokenizer);
+      assert.strictEqual(getInflatedFileLength(files, 'somefile.csv'), 50);
+    } finally {
+      await tokenizer.close();
+    }
   });
 
 });
