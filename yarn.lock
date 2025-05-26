@@ -1458,7 +1458,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tokenizer/inflate@npm:^0.2.6, @tokenizer/inflate@workspace:.":
+"@tokenizer/inflate@npm:^0.2.7, @tokenizer/inflate@workspace:.":
   version: 0.0.0-use.local
   resolution: "@tokenizer/inflate@workspace:."
   dependencies:
@@ -1473,7 +1473,7 @@ __metadata:
     debug: "npm:^4.4.1"
     del-cli: "npm:^6.0.0"
     fflate: "npm:^0.8.2"
-    file-type: "npm:^20.5.0"
+    file-type: "npm:^21.0.0"
     mocha: "npm:^11.1.0"
     strtok3: "npm:^10.2.2"
     token-types: "npm:^6.0.0"
@@ -2077,15 +2077,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"file-type@npm:^20.5.0":
-  version: 20.5.0
-  resolution: "file-type@npm:20.5.0"
+"file-type@npm:^21.0.0":
+  version: 21.0.0
+  resolution: "file-type@npm:21.0.0"
   dependencies:
-    "@tokenizer/inflate": "npm:^0.2.6"
-    strtok3: "npm:^10.2.0"
+    "@tokenizer/inflate": "npm:^0.2.7"
+    strtok3: "npm:^10.2.2"
     token-types: "npm:^6.0.0"
     uint8array-extras: "npm:^1.4.0"
-  checksum: 10c0/9b13d7e4eca79752008f036712a42df78393f05b88b9013c5754b04d3eb90b051cb692836a04acf7d2c696cb9f28077ddf8ebd6830175807f14fddf837d63be3
+  checksum: 10c0/ee6b0bb5771ad154e236bb77b5c00907743fef3637c3825713c1d6913377d3d969ebba4a6f0aa854b8231552e2c1bd0387229fe67394dc3d08a01819c7d107b1
   languageName: node
   linkType: hard
 
