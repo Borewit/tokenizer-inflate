@@ -38,9 +38,11 @@ export class GzipHandler {
           const size = await parent.tokenizer.readBuffer(buffer, {mayBeLess: true});
 
           if (size === 0) {
-            done = true;
-            if (!cancelled) {
-              parent.gunzip.push(new Uint8Array(0), true);
+            if (!done) {
+              done = true;
+              if (!cancelled) {
+                parent.gunzip.push(new Uint8Array(0), true);
+              }
             }
             return;
           }
