@@ -1465,7 +1465,7 @@ __metadata:
     file-type: "npm:^21.0.0"
     mocha: "npm:^11.5.0"
     strtok3: "npm:^10.3.1"
-    token-types: "npm:^6.0.0"
+    token-types: "npm:^6.0.3"
     ts-node: "npm:^10.9.2"
     typescript: "npm:^5.8.3"
   languageName: unknown
@@ -2582,6 +2582,16 @@ __metadata:
     "@tokenizer/token": "npm:^0.3.0"
     ieee754: "npm:^1.2.1"
   checksum: 10c0/5bf5eba51d63f71f301659ff70ce10ca43e7038364883437d8b4541cc98377e3e56109b11720e25fe51047014efaccdff90eaf6de9a78270483578814b838ab9
+  languageName: node
+  linkType: hard
+
+"token-types@npm:^6.0.3":
+  version: 6.0.3
+  resolution: "token-types@npm:6.0.3"
+  dependencies:
+    "@tokenizer/token": "npm:^0.3.0"
+    ieee754: "npm:^1.2.1"
+  checksum: 10c0/9fbd60754329cef6a793a81e62cb81880a52619b05c3ee96bb8b0f698e8f515c0e3d3159fc3b9cdec55271b6b839cba63cd6d387be4b4f63c1e4f222eb34a858
   languageName: node
   linkType: hard
 
