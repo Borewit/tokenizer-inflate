@@ -44,7 +44,7 @@
     "mocha": "^11.5.0",
     "strtok3": "^10.3.4",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.3"
+    "typescript": "^5.9.2"
   },
   "dependencies": {
     "debug": "^4.4.1",
