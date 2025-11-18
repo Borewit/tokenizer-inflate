@@ -109,7 +109,7 @@ describe('Different ZIP encode options', () => {
 
   });
 
-  describe('inflate a ZIP file with the \"data descriptor\" flag set', () => {
+  describe('inflate a ZIP file with the "data descriptor" flag set', () => {
 
     it("from file (with random-read)", async () => {
       const tokenizer = await makeFileTokenizer('file_example_XLSX_10.xlsx');

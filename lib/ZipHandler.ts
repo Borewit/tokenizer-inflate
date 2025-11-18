@@ -121,7 +121,7 @@ export class ZipHandler {
       const next = fileCb(zipHeader);
       stop = !!next.stop;
 
-      let fileData: Uint8Array | undefined = undefined;
+      let fileData: Uint8Array | undefined ;
 
       await this.tokenizer.ignore(zipHeader.extraFieldLength);
 
