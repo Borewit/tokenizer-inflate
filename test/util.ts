@@ -14,7 +14,7 @@ export async function makeReadableByteFileStream(filename: string, delay = 0): P
 
       async pull(controller) {
 
-        // @ts-ignore
+        // @ts-expect-error
         const view = controller.byobRequest.view;
 
         setTimeout(async () => {
@@ -23,11 +23,11 @@ export async function makeReadableByteFileStream(filename: string, delay = 0): P
             if (bytesRead === 0) {
               await fileHandle.close();
               controller.close();
-              // @ts-ignore
+              // @ts-expect-error
               controller.byobRequest.respond(0);
             } else {
               position += bytesRead;
-              // @ts-ignore
+              // @ts-expect-error
               controller.byobRequest.respond(bytesRead);
             }
           } catch (err) {
