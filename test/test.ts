@@ -381,7 +381,8 @@ describe("Inflate Gunzip", () => {
     }
   });
 
-  it('Inflate large tar.gz file', async () => {
+  it('Inflate large tar.gz file', async function () {
+    this.timeout(15000); // Increase timeout
     const result = await fetch("https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.7.12.tar.gz");
     assert.ok(result.ok, 'HTTP request is ok');
     if (result.body !== null) {
