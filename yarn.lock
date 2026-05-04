@@ -1508,7 +1508,7 @@ __metadata:
   dependencies:
     "@aws-sdk/client-s3": "npm:^3.990.0"
     "@biomejs/biome": "npm:2.4.0"
-    "@tokenizer/s3": "npm:^1.0.2"
+    "@tokenizer/s3": "npm:^1.0.4"
     "@types/chai": "npm:^5.2.3"
     "@types/debug": "npm:^4"
     "@types/mocha": "npm:^10.0.10"
@@ -1535,16 +1535,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tokenizer/s3@npm:^1.0.2":
-  version: 1.0.2
-  resolution: "@tokenizer/s3@npm:1.0.2"
+"@tokenizer/s3@npm:^1.0.4":
+  version: 1.0.4
+  resolution: "@tokenizer/s3@npm:1.0.4"
   dependencies:
     "@tokenizer/range": "npm:^0.13.1"
-    strtok3: "npm:^10.3.4"
+    strtok3: "npm:^10.3.5"
   peerDependencies:
     "@aws-sdk/client-s3": ">=3.0.0 <4.0.0"
     "@aws-sdk/credential-providers": ">=3.0.0 <4.0.0"
-  checksum: 10c0/7f5bd766d939af594431ded04f6e19aaf6e44ac83d478b48c8da286e5dc64321c5e04f0a67ae383085041e9344d24c75c06bd05f509388721e95ea77a1357e68
+  checksum: 10c0/d4204750a3ad9a02d4c367eb984239cf3eff68cddc19bbccbb275a55d56145fe025b7c960e9541eee12230c03e17705103eae3ceec967dda920c367609413aab
   languageName: node
   linkType: hard
 
@@ -2530,6 +2530,15 @@ __metadata:
   dependencies:
     "@tokenizer/token": "npm:^0.3.0"
   checksum: 10c0/277ab69e417f4545e364ffaf9d560c991f531045dbace32d77b5c822cccd76a608b782785a2c60595274288d4d32dced184a5c21dc20348791da697127dc69a8
+  languageName: node
+  linkType: hard
+
+"strtok3@npm:^10.3.5":
+  version: 10.3.5
+  resolution: "strtok3@npm:10.3.5"
+  dependencies:
+    "@tokenizer/token": "npm:^0.3.0"
+  checksum: 10c0/8d2477b239054c9f1f5b14a65d531147ca158ab9887fdc2d0938e77b7ec8891fb683b58254c7643afd5d98a421a59207534d491762b111f58c795071ecbe9fd1
   languageName: node
   linkType: hard
 
