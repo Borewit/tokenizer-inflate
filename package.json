@@ -40,7 +40,7 @@
     "@types/chai": "^5.2.3",
     "@types/debug": "^4",
     "@types/mocha": "^10.0.10",
-    "@types/node": "^24.19.1",
+    "@types/node": "^26.6.4",
     "chai": "^6.3.0",
     "del-cli": "^8.0.1",
     "file-type": "^22.1.1",
