@@ -14,8 +14,12 @@ export async function makeReadableByteFileStream(filename: string, delay = 0): P
 
       async pull(controller) {
 
-        // @ts-expect-error
-        const view = controller.byobRequest.view;
+        const byobRequest = controller.byobRequest;
+        const requestView = byobRequest?.view;
+        if (!byobRequest || !requestView) {
+          throw new Error('Missing BYOB request view');
+        }
+        const view = new Uint8Array(requestView.buffer, requestView.byteOffset, requestView.byteLength);
 
         setTimeout(async () => {
           try {
@@ -23,12 +27,10 @@ export async function makeReadableByteFileStream(filename: string, delay = 0): P
             if (bytesRead === 0) {
               await fileHandle.close();
               controller.close();
-              // @ts-expect-error
-              controller.byobRequest.respond(0);
+              byobRequest.respond(0);
             } else {
               position += bytesRead;
-              // @ts-expect-error
-              controller.byobRequest.respond(bytesRead);
+              byobRequest.respond(bytesRead);
             }
           } catch (err) {
             controller.error(err);
