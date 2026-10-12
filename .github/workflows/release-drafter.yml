@@ -22,7 +22,7 @@ jobs:
       pull-requests: read
     runs-on: ubuntu-latest
     steps:
-      - uses: release-drafter/release-drafter@v7.10.0
+      - uses: release-drafter/release-drafter@978bb0b30c5ee8cdd332ced253758157150d43f0 # v7.10.0
         with:
           commitish: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request') && 'main' || github.ref }}
           dry-run: ${{ github.event_name == 'pull_request' }}
