@@ -3,20 +3,16 @@
  */
 
 import type {GetObjectCommand} from '@aws-sdk/client-s3';
-import {type FileHandle, open} from 'node:fs/promises';
+import {readFile} from 'node:fs/promises';
 import {dirname, join} from "node:path";
 import {fileURLToPath} from "node:url";
+import {Readable} from 'node:stream';
 
 import initDebug from 'debug';
 const debug = initDebug('tokenizer:inflate:s3');
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixturePath = join(__dirname, 'fixture');
-
-function openFile(name: string): Promise<FileHandle> {
-  const path = join(fixturePath, name);
-  return open(path);
-}
 
 function extractRange(rangeStr: string): [number, number] {
   const match = /bytes=(\d+)-(\d+)/.exec(rangeStr);
@@ -44,15 +40,12 @@ export class MockS3Client {
       debug(`Reading ${size} bytes at offset=${range[0]}`);
 
       if (command.input.Key) {
-        const fileHandle = await openFile(command.input.Key);
-        const stat = await fileHandle.stat();
-        const stream = fileHandle.createReadStream({ start: range[0], end: range[1] });
-        stream.addListener('close', () => {
-          fileHandle.close();
-        });
+        // Metadata requests may leave the body unread, so do not tie a file handle to it.
+        const data = await readFile(join(fixturePath, command.input.Key));
+        const stream = Readable.from([data.subarray(range[0], range[1] + 1)]);
         return {
           ContentType: 'application/octet-stream',
-          ContentRange: `bytes ${range.join('-')}/${stat.size}`, // Mock content range
+          ContentRange: `bytes ${range.join('-')}/${data.length}`, // Mock content range
           Body: stream,
         };
       }
