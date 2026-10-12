@@ -51,7 +51,17 @@ async function makeNodeStreamTokenizer(fixture: string): Promise<ITokenizer> {
 
 async function makeWebStreamTokenizer(fixture: string): Promise<ITokenizer> {
   const stream = await makeReadableByteFileStream(join(fixturePath, fixture));
-  return fromWebStream(stream.stream);
+  const tokenizer = fromWebStream(stream.stream);
+  const closeTokenizer = tokenizer.close.bind(tokenizer);
+  tokenizer.close = async () => {
+    try {
+      await closeTokenizer();
+    } finally {
+      // Closing the BYOB tokenizer only releases its reader lock, so close the file explicitly.
+      await stream.closeFile();
+    }
+  };
+  return tokenizer;
 }
 
 async function makeS3Tokenizer(fixture: string): Promise<ITokenizer> {
@@ -328,16 +338,28 @@ describe("Inflate Gunzip", () => {
 
   it('Inflate gunzip file', async () => {
     const tokenizer = await makeFileTokenizer('simple.txt.gz');
-    const gzipHandler = new GzipHandler(tokenizer);
-    const readableStream = gzipHandler.inflate();
-    const reader = readableStream.getReader();
-    let decodedResult = await reader.read();
-    assert.strictEqual(decodedResult.done, false, 'decodedResult.done');
-    const decodedText = new TextDecoder('ascii').decode(decodedResult.value);
-    assert.strictEqual(decodedText,'Lorem ipsum dolor sit amet, consectetur adipiscing elit. \n' +
-      'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n', 'decoded text');
-    decodedResult = await reader.read();
-    assert.strictEqual(decodedResult.done, true, 'decodedResult.done');
+    try {
+      const gzipHandler = new GzipHandler(tokenizer);
+      const readableStream = gzipHandler.inflate();
+      const reader = readableStream.getReader();
+      try {
+        let decodedResult = await reader.read();
+        assert.strictEqual(decodedResult.done, false, 'decodedResult.done');
+        const decodedText = new TextDecoder('ascii').decode(decodedResult.value);
+        assert.strictEqual(decodedText,'Lorem ipsum dolor sit amet, consectetur adipiscing elit. \n' +
+          'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n', 'decoded text');
+        decodedResult = await reader.read();
+        assert.strictEqual(decodedResult.done, true, 'decodedResult.done');
+      } finally {
+        try {
+          await reader.cancel();
+        } finally {
+          reader.releaseLock();
+        }
+      }
+    } finally {
+      await tokenizer.close();
+    }
   });
 
   it('Inflate partial file', async () => {
@@ -390,7 +412,11 @@ describe("Inflate Gunzip", () => {
       try {
         assert.isTrue(await isTarGz(tokenizer));
       } finally {
-        await tokenizer.close();
+        try {
+          await tokenizer.close();
+        } finally {
+          await result.body.cancel();
+        }
       }
     } else {
       assert.fail('Could not stream HTTP result');
