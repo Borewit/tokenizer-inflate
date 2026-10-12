@@ -2,15 +2,15 @@
  * Ref https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT
  */
 
-import type {IGetToken} from "strtok3";
-import {UINT16_LE, UINT32_LE} from "token-types";
+import type { IGetToken } from 'strtok3';
+import { UINT16_LE, UINT32_LE } from 'token-types';
 
 export const Signature = {
   LocalFileHeader: 0x04034b50,
   DataDescriptor: 0x08074b50,
   CentralFileHeader: 0x02014b50,
   EndOfCentralDirectory: 0x06054b50
-}
+};
 
 interface IDataDescriptor {
   signature: number;
@@ -34,9 +34,10 @@ export const DataDescriptor: IGetToken<IDataDescriptor> = {
     return {
       signature: UINT32_LE.get(array, 0),
       compressedSize: UINT32_LE.get(array, 8),
-      uncompressedSize: UINT32_LE.get(array, 12),
-    }
-  }, len: 16
+      uncompressedSize: UINT32_LE.get(array, 12)
+    };
+  },
+  len: 16
 };
 
 /**
@@ -59,7 +60,7 @@ export const DataDescriptor: IGetToken<IDataDescriptor> = {
  */
 export const LocalFileHeaderToken: IGetToken<ILocalFileHeader> = {
   get(array: Uint8Array): ILocalFileHeader {
-    const flags = UINT16_LE.get(array, 6)
+    const flags = UINT16_LE.get(array, 6);
     return {
       signature: UINT32_LE.get(array, 0),
       minVersion: UINT16_LE.get(array, 4),
@@ -70,31 +71,20 @@ export const LocalFileHeaderToken: IGetToken<ILocalFileHeader> = {
       filenameLength: UINT16_LE.get(array, 26),
       extraFieldLength: UINT16_LE.get(array, 28),
       filename: null as unknown as string
-    }
-  }, len: 30
+    };
+  },
+  len: 30
 };
 
-interface I64EndOfCentralDirectoryRecord {
-  signature: number,
-  directoryRecord: bigint,
-  versionMadeBy: number,
-  versionNeedToExtract: number,
-  nrOfThisDisk: number,
-  nrOfThisDiskWithTheStart: number,
-  nrOfEntriesOnThisDisk: bigint,
-  nrOfEntriesOfSize: bigint,
-  offsetOfStartOfCd: bigint,
-}
-
 interface IEndOfCentralDirectoryRecord {
-  signature: number,
-  nrOfThisDisk: number,
-  nrOfThisDiskWithTheStart: number,
-  nrOfEntriesOnThisDisk: number,
-  nrOfEntriesOfSize: number,
-  sizeOfCd: number,
-  offsetOfStartOfCd: number,
-  zipFileCommentLength: number,
+  signature: number;
+  nrOfThisDisk: number;
+  nrOfThisDiskWithTheStart: number;
+  nrOfEntriesOnThisDisk: number;
+  nrOfEntriesOfSize: number;
+  sizeOfCd: number;
+  offsetOfStartOfCd: number;
+  zipFileCommentLength: number;
 }
 
 /**
@@ -119,9 +109,10 @@ export const EndOfCentralDirectoryRecordToken: IGetToken<IEndOfCentralDirectoryR
       nrOfEntriesOfSize: UINT16_LE.get(array, 10),
       sizeOfCd: UINT32_LE.get(array, 12),
       offsetOfStartOfCd: UINT32_LE.get(array, 16),
-      zipFileCommentLength: UINT16_LE.get(array, 20),
-    }
-  }, len: 22
+      zipFileCommentLength: UINT16_LE.get(array, 20)
+    };
+  },
+  len: 22
 };
 
 export interface IFileHeader extends ILocalFileHeader {
@@ -151,7 +142,7 @@ export interface IFileHeader extends ILocalFileHeader {
  */
 export const FileHeader: IGetToken<IFileHeader> = {
   get(array: Uint8Array): IFileHeader {
-    const flags = UINT16_LE.get(array, 8)
+    const flags = UINT16_LE.get(array, 8);
 
     return {
       signature: UINT32_LE.get(array, 0),
@@ -166,6 +157,7 @@ export const FileHeader: IGetToken<IFileHeader> = {
       fileCommentLength: UINT16_LE.get(array, 32),
       relativeOffsetOfLocalHeader: UINT32_LE.get(array, 42),
       filename: null as unknown as string
-    }
-  }, len: 46
+    };
+  },
+  len: 46
 };

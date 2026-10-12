@@ -1,10 +1,12 @@
 import * as fs from 'node:fs/promises';
 import { ReadableStream } from 'node:stream/web';
-import { StringType } from 'token-types';
 import type { ITokenizer } from 'strtok3';
+import { StringType } from 'token-types';
 
-export async function makeReadableByteFileStream(filename: string, delay = 0): Promise<{ stream: ReadableStream<Uint8Array>, closeFile: () => Promise<void> }> {
-
+export async function makeReadableByteFileStream(
+  filename: string,
+  delay = 0
+): Promise<{ stream: ReadableStream<Uint8Array>; closeFile: () => Promise<void> }> {
   let position = 0;
   const fileHandle = await fs.open(filename, 'r');
 
@@ -13,7 +15,6 @@ export async function makeReadableByteFileStream(filename: string, delay = 0): P
       type: 'bytes',
 
       async pull(controller) {
-
         const byobRequest = controller.byobRequest;
         const requestView = byobRequest?.view;
         if (!byobRequest || !requestView) {
@@ -23,7 +24,7 @@ export async function makeReadableByteFileStream(filename: string, delay = 0): P
 
         setTimeout(async () => {
           try {
-            const {bytesRead} = await fileHandle.read(view, 0, view.byteLength, position);
+            const { bytesRead } = await fileHandle.read(view, 0, view.byteLength, position);
             if (bytesRead === 0) {
               await fileHandle.close();
               controller.close();
@@ -86,12 +87,12 @@ export async function isTarHeaderChecksumMatches(tokenizer: ITokenizer): Promise
 
     let sum = 0;
     for (let i = 0; i < blockSize; i++) {
-      sum += (i >= 148 && i < 156) ? 0x20 : header[i];
+      sum += i >= 148 && i < 156 ? 0x20 : header[i];
     }
 
     if (readSum === sum) {
       if (typeflag !== 'g' && typeflag !== 'x') {
-        return true;  // Found valid regular header
+        return true; // Found valid regular header
       }
     }
 
@@ -101,7 +102,7 @@ export async function isTarHeaderChecksumMatches(tokenizer: ITokenizer): Promise
   return false;
 }
 
-export function isTarHeaderBySignature(arrayBuffer: Uint8Array, offset = 0) {
+export function isTarHeaderBySignature(arrayBuffer: Uint8Array, _offset = 0) {
   const magicBytes = new StringType(6, 'ascii').get(arrayBuffer, 257);
   return magicBytes === 'ustar\0' || magicBytes === 'ustar '; // POSIX or GNU variant
 }

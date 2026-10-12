@@ -24,7 +24,7 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
-      - name: Lint TypeScript
+      - name: Check code style (formatting, imports, and lint)
         run: yarn run lint:ts
 
       - name: Build

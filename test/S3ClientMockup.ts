@@ -2,13 +2,14 @@
  * Mock of S3 AWS Client
  */
 
-import type {GetObjectCommand} from '@aws-sdk/client-s3';
-import {readFile} from 'node:fs/promises';
-import {dirname, join} from "node:path";
-import {fileURLToPath} from "node:url";
-import {Readable} from 'node:stream';
+import { readFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { Readable } from 'node:stream';
+import { fileURLToPath } from 'node:url';
+import type { GetObjectCommand } from '@aws-sdk/client-s3';
 
 import initDebug from 'debug';
+
 const debug = initDebug('tokenizer:inflate:s3');
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -25,7 +26,6 @@ function extractRange(rangeStr: string): [number, number] {
 }
 
 export class MockS3Client {
-
   private numberReads = 0;
   private bytesRead = 0;
 
@@ -34,7 +34,7 @@ export class MockS3Client {
       const params = command.input; // Extract the command's input
       const range = params.Range ? extractRange(params.Range) : [-1, -1];
 
-      const size = range[1]-range[0] + 1;
+      const size = range[1] - range[0] + 1;
       ++this.numberReads;
       this.bytesRead += size;
       debug(`Reading ${size} bytes at offset=${range[0]}`);
@@ -46,7 +46,7 @@ export class MockS3Client {
         return {
           ContentType: 'application/octet-stream',
           ContentRange: `bytes ${range.join('-')}/${data.length}`, // Mock content range
-          Body: stream,
+          Body: stream
         };
       }
 
@@ -60,6 +60,6 @@ export class MockS3Client {
     return {
       bytesRead: this.bytesRead,
       numberReads: this.numberReads
-    }
+    };
   }
 }
