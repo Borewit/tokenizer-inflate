@@ -1,6 +1,7 @@
 import initDebug from 'debug';
 import type { IRandomAccessTokenizer, ITokenizer } from 'strtok3';
 import { StringType, UINT32_LE } from 'token-types';
+import { type ZipHandlerOptions, ZipLimitError } from './ZipLimitError.js';
 import {
   DataDescriptor,
   EndOfCentralDirectoryRecordToken,
@@ -41,7 +42,38 @@ export type InflatedDataHandler = (fileData: Uint8Array) => Promise<void>;
 export class ZipHandler {
   private syncBuffer = new Uint8Array(syncBufferSize);
 
-  constructor(private tokenizer: ITokenizer) {}
+  private readonly limits: Required<ZipHandlerOptions>;
+
+  constructor(
+    private tokenizer: ITokenizer,
+    options: ZipHandlerOptions = {}
+  ) {
+    this.limits = {
+      maxDataDescriptorScanBytes: options.maxDataDescriptorScanBytes ?? Number.POSITIVE_INFINITY,
+      maxCompressedSize: options.maxCompressedSize ?? Number.POSITIVE_INFINITY,
+      maxUncompressedSize: options.maxUncompressedSize ?? Number.POSITIVE_INFINITY
+    };
+    for (const [name, limit] of Object.entries(this.limits)) {
+      if (limit !== Number.POSITIVE_INFINITY && (!Number.isSafeInteger(limit) || limit <= 0)) {
+        throw new RangeError(`${name} must be a positive safe integer or Infinity`);
+      }
+    }
+  }
+
+  /** Reject oversized entries before retaining data or allocating a combined buffer. */
+  private checkLimit(limit: keyof ZipHandlerOptions, size: number): void {
+    if (size > this.limits[limit]) {
+      throw new ZipLimitError(limit, size, this.limits[limit]);
+    }
+  }
+
+  private checkEntrySize(header: ILocalFileHeader): void {
+    this.checkLimit('maxCompressedSize', header.compressedSize);
+    this.checkLimit('maxUncompressedSize', header.uncompressedSize);
+    if (header.compressedMethod === 0) {
+      this.checkLimit('maxUncompressedSize', header.compressedSize);
+    }
+  }
 
   async isZip(): Promise<boolean> {
     return (await this.peekSignature()) === Signature.LocalFileHeader;
@@ -124,28 +156,50 @@ export class ZipHandler {
 
       await this.tokenizer.ignore(zipHeader.extraFieldLength);
 
+      if (next.handler) {
+        this.checkEntrySize(zipHeader);
+      }
       if (zipHeader.dataDescriptor && zipHeader.compressedSize === 0) {
         const chunks: Uint8Array[] = [];
-        let len = syncBufferSize;
+        let totalSize = 0;
+        const scanLimit = Math.min(
+          this.limits.maxDataDescriptorScanBytes,
+          next.handler ? this.limits.maxCompressedSize : Number.POSITIVE_INFINITY,
+          next.handler && zipHeader.compressedMethod === 0 ? this.limits.maxUncompressedSize : Number.POSITIVE_INFINITY
+        );
 
         debug('Compressed-file-size unknown, scanning for next data-descriptor-signature....');
-        let nextHeaderIndex = -1;
-        while (nextHeaderIndex < 0 && len === syncBufferSize) {
-          len = await this.tokenizer.peekBuffer(this.syncBuffer, { mayBeLess: true });
-          nextHeaderIndex = indexOf(this.syncBuffer.subarray(0, len), ddSignatureArray);
-          const size = nextHeaderIndex >= 0 ? nextHeaderIndex : len;
-
+        while (true) {
+          // Keep three bytes of overlap and allow the signature to start exactly at the limit.
+          const peekLength = Math.min(syncBufferSize, scanLimit - totalSize + ddSignatureArray.length);
+          const len = await this.tokenizer.peekBuffer(this.syncBuffer.subarray(0, peekLength), { mayBeLess: true });
+          const nextHeaderIndex = indexOf(this.syncBuffer.subarray(0, len), ddSignatureArray);
+          if (nextHeaderIndex < 0 && len < ddSignatureArray.length) {
+            throw new Error('Expected data-descriptor-signature before end of input');
+          }
+          const size = nextHeaderIndex >= 0 ? nextHeaderIndex : len - ddSignatureArray.length + 1;
+          this.checkLimit('maxDataDescriptorScanBytes', totalSize + size);
           if (next.handler) {
-            const data = new Uint8Array(size);
-            await this.tokenizer.readBuffer(data);
-            chunks.push(data);
+            this.checkLimit('maxCompressedSize', totalSize + size);
+            if (zipHeader.compressedMethod === 0) {
+              this.checkLimit('maxUncompressedSize', totalSize + size);
+            }
+            if (size > 0) {
+              const data = new Uint8Array(size);
+              await this.tokenizer.readBuffer(data);
+              chunks.push(data);
+            }
           } else {
-            // Move position to the next header if found, skip the whole buffer otherwise
             await this.tokenizer.ignore(size);
+          }
+          totalSize += size;
+          if (nextHeaderIndex >= 0) {
+            break;
           }
         }
         debug(`Found data-descriptor-signature at pos=${this.tokenizer.position}`);
         if (next.handler) {
+          this.checkLimit('maxCompressedSize', totalSize);
           await this.inflate(zipHeader, mergeArrays(chunks), next.handler);
         }
       } else {
@@ -181,6 +235,8 @@ export class ZipHandler {
         const zipHeader = await this.readLocalFileHeader();
         if (zipHeader) {
           await this.tokenizer.ignore(zipHeader.extraFieldLength);
+          this.checkEntrySize(fileHeader);
+          this.checkEntrySize(zipHeader);
           const fileData = new Uint8Array(fileHeader.compressedSize);
           await this.tokenizer.readBuffer(fileData);
           await this.inflate(zipHeader, fileData, next.handler);
@@ -195,6 +251,7 @@ export class ZipHandler {
   private async inflate(zipHeader: ILocalFileHeader, fileData: Uint8Array, cb: InflatedDataHandler): Promise<void> {
     if (zipHeader.compressedMethod === 0) {
       // Stored (uncompressed)
+      this.checkLimit('maxUncompressedSize', fileData.length);
       return cb(fileData);
     }
 
@@ -204,11 +261,11 @@ export class ZipHandler {
 
     debug(`Decompress filename=${zipHeader.filename}, compressed-size=${fileData.length}`);
 
-    const uncompressedData = await ZipHandler.decompressDeflateRaw(fileData);
+    const uncompressedData = await this.decompressDeflateRaw(fileData);
     return cb(uncompressedData);
   }
 
-  private static async decompressDeflateRaw(data: Uint8Array): Promise<Uint8Array> {
+  private async decompressDeflateRaw(data: Uint8Array): Promise<Uint8Array> {
     // Wrap Uint8Array in a ReadableStream without copying
     const input = new ReadableStream<Uint8Array>({
       start(controller) {
@@ -220,12 +277,29 @@ export class ZipHandler {
     const ds = new DecompressionStream('deflate-raw');
     const output = input.pipeThrough(ds as unknown as ReadableWritablePair<Uint8Array, Uint8Array>);
 
+    const reader = output.getReader();
     try {
-      // Collect decompressed bytes from the output stream
-      const response = new Response(output);
-      const buffer = await response.arrayBuffer();
-      return new Uint8Array(buffer);
+      const chunks: Uint8Array[] = [];
+      let totalSize = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+        this.checkLimit('maxUncompressedSize', totalSize + value.length);
+        totalSize += value.length;
+        chunks.push(value);
+      }
+      this.checkLimit('maxUncompressedSize', totalSize);
+      return mergeArrays(chunks);
     } catch (err: unknown) {
+      // Cancellation propagates through pipeThrough to stop decompression.
+      await reader.cancel(err).catch(() => {
+        // Preserve the original failure if cancellation also fails.
+      });
+      if (err instanceof ZipLimitError) {
+        throw err;
+      }
       // Provide ZIP-specific error context
       const message =
         err instanceof Error
@@ -233,6 +307,8 @@ export class ZipHandler {
           : 'Unknown decompression error in ZIP entry';
 
       throw new TypeError(message);
+    } finally {
+      reader.releaseLock();
     }
   }
 
