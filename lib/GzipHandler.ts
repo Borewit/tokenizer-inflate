@@ -22,6 +22,6 @@ export class GzipHandler {
 
         controller.enqueue(buffer.subarray(0, size));
       }
-    }).pipeThrough(new DecompressionStream("gzip") as unknown as ReadableWritablePair<Uint8Array, Uint8Array>);
+    }).pipeThrough(new DecompressionStream('gzip') as unknown as ReadableWritablePair<Uint8Array, Uint8Array>);
   }
 }

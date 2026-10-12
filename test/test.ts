@@ -1,15 +1,14 @@
-import { it } from 'mocha';
-import { assert } from 'chai';
+import { createReadStream } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {fromBuffer, fromFile, fromStream, fromWebStream, type IRandomAccessTokenizer, type ITokenizer} from 'strtok3';
-import { makeReadableByteFileStream, isTarHeaderChecksumMatches } from "./util.js";
-import { createReadStream } from "node:fs";
-import { makeChunkedTokenizerFromS3 } from "@tokenizer/s3";
-import { MockS3Client } from "./S3ClientMockup.js";
-import type { S3Client } from "@aws-sdk/client-s3";
-
-import { ZipHandler, type ILocalFileHeader, GzipHandler } from "../lib/index.js";
+import type { S3Client } from '@aws-sdk/client-s3';
+import { makeChunkedTokenizerFromS3 } from '@tokenizer/s3';
+import { assert } from 'chai';
+import { it } from 'mocha';
+import { fromBuffer, fromFile, fromStream, fromWebStream, type IRandomAccessTokenizer, type ITokenizer } from 'strtok3';
+import { GzipHandler, type ILocalFileHeader, ZipHandler } from '../lib/index.js';
+import { MockS3Client } from './S3ClientMockup.js';
+import { isTarHeaderChecksumMatches, makeReadableByteFileStream } from './util.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixturePath = join(__dirname, 'fixture');
@@ -94,8 +93,7 @@ function getInflatedFileLength(files: IExtractedFile[], filename: string): numbe
 }
 
 describe('Different ZIP encode options', () => {
-
-  it("No data-descriptor, with extra-field-length in local-file-header;", async () => {
+  it('No data-descriptor, with extra-field-length in local-file-header;', async () => {
     const tokenizer = await makeFileTokenizer('fixture.docx');
     try {
       await checkContentTypesXml(tokenizer);
@@ -104,7 +102,7 @@ describe('Different ZIP encode options', () => {
     }
   });
 
-  it("inflate fixture.xslx", async () => {
+  it('inflate fixture.xslx', async () => {
     const tokenizer = await makeFileTokenizer('fixture.xlsx');
     try {
       const files = await extractFilesFromFixture(tokenizer);
@@ -116,32 +114,28 @@ describe('Different ZIP encode options', () => {
     } finally {
       await tokenizer.close();
     }
-
   });
 
   describe('inflate a ZIP file with the "data descriptor" flag set', () => {
-
-    it("from file (with random-read)", async () => {
+    it('from file (with random-read)', async () => {
       const tokenizer = await makeFileTokenizer('file_example_XLSX_10.xlsx');
       try {
         await checkContentTypesXml(tokenizer);
-
       } finally {
         await tokenizer.close();
       }
     });
 
-    it("from web-stream (without random-read)", async () => {
+    it('from web-stream (without random-read)', async () => {
       const tokenizer = await makeWebStreamTokenizer('file_example_XLSX_10.xlsx');
       try {
         await checkContentTypesXml(tokenizer);
-
       } finally {
         await tokenizer.close();
       }
     });
 
-    it("from Node.js-stream (without random-read)", async () => {
+    it('from Node.js-stream (without random-read)', async () => {
       const tokenizer = await makeNodeStreamTokenizer('file_example_XLSX_10.xlsx');
       try {
         await checkContentTypesXml(tokenizer);
@@ -149,10 +143,9 @@ describe('Different ZIP encode options', () => {
         await tokenizer.close();
       }
     });
-
   });
 
-  it("extract uncompressed data", async () => {
+  it('extract uncompressed data', async () => {
     const tokenizer = await makeFileTokenizer('fixture.odp');
     try {
       const files = await extractFilesFromFixture(tokenizer);
@@ -167,7 +160,7 @@ describe('Different ZIP encode options', () => {
     }
   });
 
-  it("inflate deflate", async () => {
+  it('inflate deflate', async () => {
     const tokenizer = await makeFileTokenizer('sample-deflate.zip');
     try {
       const files = await extractFilesFromFixture(tokenizer);
@@ -177,7 +170,7 @@ describe('Different ZIP encode options', () => {
     }
   });
 
-  it("inflate deflate64", async () => {
+  it('inflate deflate64', async () => {
     const tokenizer = await makeFileTokenizer('sample-deflate64.zip');
     try {
       const files = await extractFilesFromFixture(tokenizer);
@@ -186,12 +179,10 @@ describe('Different ZIP encode options', () => {
       await tokenizer.close();
     }
   });
-
 });
 
 describe('Inflate some zip files', () => {
-
-  it("inflate sample-4", async () => {
+  it('inflate sample-4', async () => {
     const tokenizer = await makeFileTokenizer('sample-zip-files-sample-4.zip');
     try {
       const files = await extractFilesFromFixture(tokenizer);
@@ -199,10 +190,9 @@ describe('Inflate some zip files', () => {
     } finally {
       await tokenizer.close();
     }
-
   });
 
-  it("inflate sample-5", async () => {
+  it('inflate sample-5', async () => {
     const tokenizer = await makeFileTokenizer('sample-zip-files-sample-5.zip');
     try {
       const files = await extractFilesFromFixture(tokenizer);
@@ -212,7 +202,7 @@ describe('Inflate some zip files', () => {
     }
   });
 
-  it("inflate sample-6", async () => {
+  it('inflate sample-6', async () => {
     const tokenizer = await makeFileTokenizer('sample-zip-files-sample-6.zip');
     try {
       const files = await extractFilesFromFixture(tokenizer);
@@ -222,7 +212,7 @@ describe('Inflate some zip files', () => {
     }
   });
 
-  it("inflate deflate64", async () => {
+  it('inflate deflate64', async () => {
     const tokenizer = await makeFileTokenizer('sample-deflate64.zip');
     try {
       const files = await extractFilesFromFixture(tokenizer);
@@ -231,12 +221,10 @@ describe('Inflate some zip files', () => {
       await tokenizer.close();
     }
   });
-
 });
 
 describe('Inflate fixture.zip', () => {
-
-  it("from file", async () => {
+  it('from file', async () => {
     const tokenizer = await makeFileTokenizer('fixture.zip');
     try {
       const files = await extractFilesFromFixture(tokenizer);
@@ -246,7 +234,7 @@ describe('Inflate fixture.zip', () => {
     }
   });
 
-  it("from web-stream", async () => {
+  it('from web-stream', async () => {
     const tokenizer = await makeWebStreamTokenizer('fixture.zip');
     try {
       const files = await extractFilesFromFixture(tokenizer);
@@ -256,7 +244,7 @@ describe('Inflate fixture.zip', () => {
     }
   });
 
-  it("from Node.js-stream", async () => {
+  it('from Node.js-stream', async () => {
     const tokenizer = await makeNodeStreamTokenizer('fixture.zip');
     try {
       const files = await extractFilesFromFixture(tokenizer);
@@ -265,12 +253,10 @@ describe('Inflate fixture.zip', () => {
       await tokenizer.close();
     }
   });
-
 });
 
 describe('Inflate somefile.csv.zip', () => {
-
-  it("from file", async () => {
+  it('from file', async () => {
     const tokenizer = await makeFileTokenizer('somefile.csv.zip');
     try {
       const files = await extractFilesFromFixture(tokenizer);
@@ -280,7 +266,7 @@ describe('Inflate somefile.csv.zip', () => {
     }
   });
 
-  it("from Node.js-stream", async () => {
+  it('from Node.js-stream', async () => {
     const tokenizer = await makeNodeStreamTokenizer('somefile.csv.zip');
     try {
       const files = await extractFilesFromFixture(tokenizer);
@@ -290,7 +276,7 @@ describe('Inflate somefile.csv.zip', () => {
     }
   });
 
-  it("from web-stream", async () => {
+  it('from web-stream', async () => {
     const tokenizer = await makeWebStreamTokenizer('somefile.csv.zip');
     try {
       const files = await extractFilesFromFixture(tokenizer);
@@ -300,7 +286,7 @@ describe('Inflate somefile.csv.zip', () => {
     }
   });
 
-  it("from S3 mockup", async () => {
+  it('from S3 mockup', async () => {
     const tokenizer = await makeS3Tokenizer('somefile.csv.zip');
     try {
       const files = await extractFilesFromFixture(tokenizer);
@@ -309,16 +295,14 @@ describe('Inflate somefile.csv.zip', () => {
       await tokenizer.close();
     }
   });
-
 });
 
 function assertFileIsXml(fileData: Uint8Array) {
   const xmlContent = new TextDecoder('utf-8').decode(fileData);
-  assert.strictEqual(xmlContent.indexOf("<?xml version=\"1.0\""), 0, 'Content is XML');
+  assert.strictEqual(xmlContent.indexOf('<?xml version="1.0"'), 0, 'Content is XML');
 }
 
-describe("Inflate Gunzip", () => {
-
+describe('Inflate Gunzip', () => {
   async function isTarGz(tokenizer: ITokenizer): Promise<boolean> {
     const handler = new GzipHandler(tokenizer);
 
@@ -346,8 +330,12 @@ describe("Inflate Gunzip", () => {
         let decodedResult = await reader.read();
         assert.strictEqual(decodedResult.done, false, 'decodedResult.done');
         const decodedText = new TextDecoder('ascii').decode(decodedResult.value);
-        assert.strictEqual(decodedText,'Lorem ipsum dolor sit amet, consectetur adipiscing elit. \n' +
-          'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n', 'decoded text');
+        assert.strictEqual(
+          decodedText,
+          'Lorem ipsum dolor sit amet, consectetur adipiscing elit. \n' +
+            'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n',
+          'decoded text'
+        );
         decodedResult = await reader.read();
         assert.strictEqual(decodedResult.done, true, 'decodedResult.done');
       } finally {
@@ -388,7 +376,6 @@ describe("Inflate Gunzip", () => {
       }
 
       assert.isTrue(threw, 'expected reader.read() to throw for partial gzip');
-
     } finally {
       await tokenizer.close();
     }
@@ -405,7 +392,7 @@ describe("Inflate Gunzip", () => {
 
   it('Inflate large tar.gz file', async function () {
     this.timeout(15000); // Increase timeout
-    const result = await fetch("https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.7.12.tar.gz");
+    const result = await fetch('https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.7.12.tar.gz');
     assert.ok(result.ok, 'HTTP request is ok');
     if (result.body !== null) {
       const tokenizer = fromWebStream(result.body);
@@ -422,5 +409,4 @@ describe("Inflate Gunzip", () => {
       assert.fail('Could not stream HTTP result');
     }
   });
-
 });

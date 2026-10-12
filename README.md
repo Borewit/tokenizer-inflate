@@ -110,5 +110,9 @@ This module is a [pure ECMAScript Module (ESM)](https://gist.github.com/sindreso
 The distributed JavaScript codebase is compliant with the [ECMAScript 2020 (11th Edition)](https://en.wikipedia.org/wiki/ECMAScript_version_history#11th_Edition_%E2%80%93_ECMAScript_2020) standard.
 If used with Node.js, it requires version ≥ 18.
 
+## Contributing
+
+See the [contribution guide](CONTRIBUTING.md) for code style and development checks.
+
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
