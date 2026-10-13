@@ -278,9 +278,9 @@ export class ZipHandler {
     const output = input.pipeThrough(ds as unknown as ReadableWritablePair<Uint8Array, Uint8Array>);
 
     const reader = output.getReader();
+    const chunks: Uint8Array[] = [];
+    let totalSize = 0;
     try {
-      const chunks: Uint8Array[] = [];
-      let totalSize = 0;
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
@@ -299,6 +299,12 @@ export class ZipHandler {
       });
       if (err instanceof ZipLimitError) {
         throw err;
+      }
+      // Descriptor scanning can retain bytes after the deflate stream, including
+      // unsigned ZIP data descriptors. Node.js rejects these after delivering the
+      // inflated data. Recover only this error; every retained chunk was bounded.
+      if (err instanceof Error && 'code' in err && err.code === 'ERR_TRAILING_JUNK_AFTER_STREAM_END') {
+        return mergeArrays(chunks);
       }
       // Provide ZIP-specific error context
       const message =
