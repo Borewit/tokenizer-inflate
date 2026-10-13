@@ -10,6 +10,13 @@ updates:
     open-pull-requests-limit: 30
     versioning-strategy: increase
     target-branch: "main"
+    cooldown:
+      exclude:
+        - "@tokenizer/*"
+        - "@borewit/*"
+        - "strtok3"
+        - "token-types"
+        - "peek-readable"
     labels:
       - dependencies
     groups:
