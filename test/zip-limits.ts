@@ -77,7 +77,37 @@ async function stream(zip: Uint8Array) {
   return fromStream(Readable.from([zip], { objectMode: false }));
 }
 
+function makeZipWithTrailingDeflateData(data: Uint8Array) {
+  const zip = makeZip(data, false, true);
+  const header = new DataView(zip.buffer);
+  const compressedSize = header.getUint32(18, true);
+  const descriptor = new Uint8Array(12);
+  const view = new DataView(descriptor.buffer);
+  view.setUint32(4, compressedSize, true);
+  view.setUint32(8, data.length, true);
+  const output = new Uint8Array(zip.length + descriptor.length);
+  output.set(zip.subarray(0, 30 + compressedSize));
+  output.set(descriptor, 30 + compressedSize);
+  output.set(zip.subarray(30 + compressedSize), 30 + compressedSize + descriptor.length);
+  // Exercise the inflater with descriptor bytes retained by an entry scanner.
+  new DataView(output.buffer).setUint32(18, compressedSize + descriptor.length, true);
+  return output;
+}
+
 describe('Opt-in ZIP processing limits', () => {
+  it('recovers bounded output when descriptor bytes follow the deflate stream', async () => {
+    const data = new Uint8Array(100000).fill(1);
+    const zip = makeZipWithTrailingDeflateData(data);
+    assert.deepEqual(await extract(await stream(zip), { maxUncompressedSize: data.length }), [data]);
+  });
+
+  it('does not recover oversized output when descriptor bytes follow the deflate stream', async () => {
+    const zip = makeZipWithTrailingDeflateData(new Uint8Array(100000));
+    // Understate the header so the actual inflated output must enforce the limit.
+    new DataView(zip.buffer).setUint32(22, 1, true);
+    await expectLimit(extract(await stream(zip), { maxUncompressedSize: 100 }), 'maxUncompressedSize', 100);
+  });
+
   for (const limit of ['maxDataDescriptorScanBytes', 'maxCompressedSize', 'maxUncompressedSize'] as const) {
     it(`validates ${limit}`, () => {
       for (const value of [0, -1, 1.5, Number.NaN, Number.NEGATIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1]) {
