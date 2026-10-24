@@ -1,7 +1,7 @@
 import initDebug from 'debug';
-import { createTokenizerView, type IRandomAccessTokenizer, type ITokenizer } from 'strtok3/core';
+import { createTokenizerView, type IGetToken, type IRandomAccessTokenizer, type ITokenizer } from 'strtok3/core';
 import { StringType, UINT32_LE } from 'token-types';
-import { type ZipHandlerOptions, ZipLimitError } from './ZipLimitError.js';
+import { type ZipHandlerOptions, ZipLimitError, type ZipProcessingLimits } from './ZipLimitError.js';
 import {
   DataDescriptor,
   EndOfCentralDirectoryRecordToken,
@@ -29,7 +29,6 @@ const debug = initDebug('tokenizer:inflate');
 
 const syncBufferSize = 256 * 1024;
 
-const ddSignatureArray = signatureToArray(Signature.DataDescriptor);
 const eocdSignatureBytes = signatureToArray(Signature.EndOfCentralDirectory);
 
 /**
@@ -42,17 +41,33 @@ export type InflatedDataHandler = (fileData: Uint8Array) => Promise<void>;
 export class ZipHandler {
   private syncBuffer = new Uint8Array(syncBufferSize);
 
-  private readonly limits: Required<ZipHandlerOptions>;
+  private readonly limits: Required<ZipProcessingLimits>;
+  private readonly useCentralDirectory: boolean;
+  private readonly allowTruncatedDataDescriptor: boolean;
+  private scannedBytes = 0;
+  private descriptorScannedBytes = 0;
 
   constructor(
     private tokenizer: ITokenizer,
     options: ZipHandlerOptions = {}
   ) {
     this.limits = {
+      maxEntryCount: options.maxEntryCount ?? Number.POSITIVE_INFINITY,
+      maxTotalScanBytes: options.maxTotalScanBytes ?? Number.POSITIVE_INFINITY,
+      maxTotalDataDescriptorScanBytes: options.maxTotalDataDescriptorScanBytes ?? Number.POSITIVE_INFINITY,
+      maxSkippedEntrySize: options.maxSkippedEntrySize ?? Number.POSITIVE_INFINITY,
       maxDataDescriptorScanBytes: options.maxDataDescriptorScanBytes ?? Number.POSITIVE_INFINITY,
       maxCompressedSize: options.maxCompressedSize ?? Number.POSITIVE_INFINITY,
       maxUncompressedSize: options.maxUncompressedSize ?? Number.POSITIVE_INFINITY
     };
+    this.useCentralDirectory = options.useCentralDirectory ?? true;
+    this.allowTruncatedDataDescriptor = options.allowTruncatedDataDescriptor ?? false;
+    if (typeof this.useCentralDirectory !== 'boolean') {
+      throw new TypeError('useCentralDirectory must be a boolean');
+    }
+    if (typeof this.allowTruncatedDataDescriptor !== 'boolean') {
+      throw new TypeError('allowTruncatedDataDescriptor must be a boolean');
+    }
     for (const [name, limit] of Object.entries(this.limits)) {
       if (limit !== Number.POSITIVE_INFINITY && (!Number.isSafeInteger(limit) || limit <= 0)) {
         throw new RangeError(`${name} must be a positive safe integer or Infinity`);
@@ -61,10 +76,36 @@ export class ZipHandler {
   }
 
   /** Reject oversized entries before retaining data or allocating a combined buffer. */
-  private checkLimit(limit: keyof ZipHandlerOptions, size: number): void {
+  private checkLimit(limit: keyof ZipProcessingLimits, size: number): void {
     if (size > this.limits[limit]) {
       throw new ZipLimitError(limit, size, this.limits[limit]);
     }
+  }
+
+  private resetTraversal(): void {
+    this.scannedBytes = 0;
+    this.descriptorScannedBytes = 0;
+  }
+
+  private consumeBytes(length: number): void {
+    this.checkLimit('maxTotalScanBytes', this.scannedBytes + length);
+    this.scannedBytes += length;
+  }
+
+  private readToken<T>(token: IGetToken<T>, input: ITokenizer = this.tokenizer): Promise<T> {
+    this.consumeBytes(token.len);
+    return input.readToken(token);
+  }
+
+  private ignore(length: number, input: ITokenizer = this.tokenizer): Promise<number> {
+    this.consumeBytes(length);
+    return input.ignore(length);
+  }
+
+  private readData(length: number): Promise<Uint8Array> {
+    this.consumeBytes(length);
+    const data = new Uint8Array(length);
+    return this.tokenizer.readBuffer(data).then(() => data);
   }
 
   private checkEntrySize(header: ILocalFileHeader): void {
@@ -87,6 +128,7 @@ export class ZipHandler {
     const randomReadTokenizer = this.tokenizer as IRandomAccessTokenizer;
     const chunkLength = Math.min(16 * 1024, randomReadTokenizer.fileInfo.size);
     const buffer = this.syncBuffer.subarray(0, chunkLength);
+    this.consumeBytes(chunkLength);
     await this.tokenizer.readBuffer(buffer, { position: randomReadTokenizer.fileInfo.size - chunkLength });
     // Search the buffer from end to beginning for EOCD signature
     // const signature = 0x06054b50;
@@ -105,6 +147,19 @@ export class ZipHandler {
   }
 
   async readCentralDirectory(): Promise<IFileHeader[] | undefined> {
+    this.resetTraversal();
+    const entries = await this.centralDirectoryEntries();
+    if (!entries) {
+      return;
+    }
+    const files: IFileHeader[] = [];
+    for await (const entry of entries) {
+      files.push(entry);
+    }
+    return files;
+  }
+
+  private async centralDirectoryEntries(): Promise<AsyncGenerator<IFileHeader> | undefined> {
     if (!this.tokenizer.supportsRandomAccess()) {
       debug('Cannot reading central-directory without random-read support');
       return;
@@ -115,34 +170,49 @@ export class ZipHandler {
       const offset = await this.findEndOfCentralDirectoryLocator();
       if (offset > 0) {
         debug('Central-directory 32-bit signature found');
-        const eocdHeader = await this.tokenizer.readToken(EndOfCentralDirectoryRecordToken, offset);
-        const files: IFileHeader[] = [];
-        (this.tokenizer as IRandomAccessTokenizer).setPosition(eocdHeader.offsetOfStartOfCd);
-        const directory = createTokenizerView(this.tokenizer, eocdHeader.sizeOfCd);
-        try {
-          for (let n = 0; n < eocdHeader.nrOfEntriesOfSize; ++n) {
-            const entry = await directory.readToken(FileHeader);
-            if (entry.signature !== Signature.CentralFileHeader) {
-              throw new Error('Expected Central-File-Header signature');
-            }
-            entry.filename = await directory.readToken(new StringType(entry.filenameLength, 'utf-8'));
-            await directory.ignore(entry.extraFieldLength);
-            await directory.ignore(entry.fileCommentLength);
-            files.push(entry);
-            debug(`Add central-directory file-entry: n=${n + 1}/${files.length}: filename=${files[n].filename}`);
-          }
-          return files;
-        } finally {
-          await directory.close();
-        }
+        (this.tokenizer as IRandomAccessTokenizer).setPosition(offset);
+        const eocdHeader = await this.readToken(EndOfCentralDirectoryRecordToken);
+        return this.iterateDirectory(eocdHeader.offsetOfStartOfCd, eocdHeader.sizeOfCd, eocdHeader.nrOfEntriesOfSize);
       }
     } finally {
       (this.tokenizer as IRandomAccessTokenizer).setPosition(pos);
     }
   }
 
+  private async *iterateDirectory(offset: number, size: number, count: number): AsyncGenerator<IFileHeader> {
+    const source = this.tokenizer as IRandomAccessTokenizer;
+    const pos = source.position;
+    let directory: IRandomAccessTokenizer | undefined;
+    let position = 0;
+    try {
+      source.setPosition(offset);
+      directory = createTokenizerView(source, size) as IRandomAccessTokenizer;
+      for (let n = 0; n < count; ++n) {
+        this.checkLimit('maxEntryCount', n + 1);
+        // Extraction between yields can move the source to a local header.
+        directory.setPosition(position);
+        const entry = await this.readToken(FileHeader, directory);
+        if (entry.signature !== Signature.CentralFileHeader) {
+          throw new Error('Expected Central-File-Header signature');
+        }
+        entry.filename = await this.readToken(new StringType(entry.filenameLength, 'utf-8'), directory);
+        await this.ignore(entry.extraFieldLength, directory);
+        await this.ignore(entry.fileCommentLength, directory);
+        position = directory.position;
+        yield entry;
+      }
+    } finally {
+      try {
+        await directory?.close();
+      } finally {
+        source.setPosition(pos);
+      }
+    }
+  }
+
   async unzip(fileCb: InflateFileFilter): Promise<void> {
-    const entries = await this.readCentralDirectory();
+    this.resetTraversal();
+    const entries = this.useCentralDirectory ? await this.centralDirectoryEntries() : undefined;
     if (entries) {
       // Use Central Directory to iterate over files
       return this.iterateOverCentralDirectory(entries, fileCb);
@@ -150,56 +220,71 @@ export class ZipHandler {
 
     // Scan Zip files for local-file-header
     let stop = false;
+    let entryCount = 0;
     do {
       const zipHeader = await this.readLocalFileHeader();
       if (!zipHeader) {
         break;
       }
+      this.checkLimit('maxEntryCount', ++entryCount);
 
       const next = fileCb(zipHeader);
       stop = !!next.stop;
 
       let fileData: Uint8Array | undefined;
 
-      await this.tokenizer.ignore(zipHeader.extraFieldLength);
+      await this.ignore(zipHeader.extraFieldLength);
 
       if (next.handler) {
         this.checkEntrySize(zipHeader);
+      } else {
+        this.checkLimit('maxSkippedEntrySize', zipHeader.compressedSize);
       }
       if (zipHeader.dataDescriptor && zipHeader.compressedSize === 0) {
         const chunks: Uint8Array[] = [];
         let totalSize = 0;
         const scanLimit = Math.min(
           this.limits.maxDataDescriptorScanBytes,
+          this.limits.maxTotalDataDescriptorScanBytes - this.descriptorScannedBytes,
+          this.limits.maxTotalScanBytes - this.scannedBytes,
+          next.handler ? Number.POSITIVE_INFINITY : this.limits.maxSkippedEntrySize,
           next.handler ? this.limits.maxCompressedSize : Number.POSITIVE_INFINITY,
           next.handler && zipHeader.compressedMethod === 0 ? this.limits.maxUncompressedSize : Number.POSITIVE_INFINITY
         );
 
         debug('Compressed-file-size unknown, scanning for next data-descriptor-signature....');
         while (true) {
-          // Keep three bytes of overlap and allow the signature to start exactly at the limit.
-          const peekLength = Math.min(syncBufferSize, scanLimit - totalSize + ddSignatureArray.length);
+          // Retain a full descriptor overlap so its compressed-size field can be validated.
+          const peekLength = Math.min(syncBufferSize, scanLimit - totalSize + DataDescriptor.len);
           const len = await this.tokenizer.peekBuffer(this.syncBuffer.subarray(0, peekLength), { mayBeLess: true });
-          const nextHeaderIndex = indexOf(this.syncBuffer.subarray(0, len), ddSignatureArray);
-          if (nextHeaderIndex < 0 && len < ddSignatureArray.length) {
+          const allowTruncated = this.allowTruncatedDataDescriptor && len < peekLength;
+          const nextHeaderIndex = findDescriptor(this.syncBuffer.subarray(0, len), totalSize, allowTruncated);
+          if (nextHeaderIndex < 0 && len < DataDescriptor.len && !allowTruncated) {
             throw new Error('Expected data-descriptor-signature before end of input');
           }
-          const size = nextHeaderIndex >= 0 ? nextHeaderIndex : len - ddSignatureArray.length + 1;
+          const size = nextHeaderIndex >= 0 ? nextHeaderIndex : allowTruncated ? len : len - DataDescriptor.len + 1;
+          if (size === 0) {
+            break;
+          }
           this.checkLimit('maxDataDescriptorScanBytes', totalSize + size);
+          this.checkLimit('maxTotalDataDescriptorScanBytes', this.descriptorScannedBytes + size);
+          if (!next.handler) {
+            this.checkLimit('maxSkippedEntrySize', totalSize + size);
+          }
           if (next.handler) {
             this.checkLimit('maxCompressedSize', totalSize + size);
             if (zipHeader.compressedMethod === 0) {
               this.checkLimit('maxUncompressedSize', totalSize + size);
             }
             if (size > 0) {
-              const data = new Uint8Array(size);
-              await this.tokenizer.readBuffer(data);
+              const data = await this.readData(size);
               chunks.push(data);
             }
           } else {
-            await this.tokenizer.ignore(size);
+            await this.ignore(size);
           }
           totalSize += size;
+          this.descriptorScannedBytes += size;
           if (nextHeaderIndex >= 0) {
             break;
           }
@@ -212,19 +297,18 @@ export class ZipHandler {
       } else {
         if (next.handler) {
           debug(`Reading compressed-file-data: ${zipHeader.compressedSize} bytes`);
-          fileData = new Uint8Array(zipHeader.compressedSize);
-          await this.tokenizer.readBuffer(fileData);
+          fileData = await this.readData(zipHeader.compressedSize);
           await this.inflate(zipHeader, fileData, next.handler as InflatedDataHandler);
         } else {
           debug(`Ignoring compressed-file-data: ${zipHeader.compressedSize} bytes`);
-          await this.tokenizer.ignore(zipHeader.compressedSize);
+          await this.ignore(zipHeader.compressedSize);
         }
       }
 
       debug(`Reading data-descriptor at pos=${this.tokenizer.position}`);
       if (zipHeader.dataDescriptor) {
         // await this.tokenizer.ignore(DataDescriptor.len);
-        const dataDescriptor = await this.tokenizer.readToken(DataDescriptor);
+        const dataDescriptor = await this.readToken(DataDescriptor);
         if (dataDescriptor.signature !== 0x08074b50) {
           throw new Error(
             `Expected data-descriptor-signature at position ${this.tokenizer.position - DataDescriptor.len}`
@@ -234,18 +318,17 @@ export class ZipHandler {
     } while (!stop);
   }
 
-  private async iterateOverCentralDirectory(entries: IFileHeader[], fileCb: InflateFileFilter) {
-    for (const fileHeader of entries) {
+  private async iterateOverCentralDirectory(entries: AsyncIterable<IFileHeader>, fileCb: InflateFileFilter) {
+    for await (const fileHeader of entries) {
       const next = fileCb(fileHeader);
       if (next.handler) {
         (this.tokenizer as IRandomAccessTokenizer).setPosition(fileHeader.relativeOffsetOfLocalHeader);
         const zipHeader = await this.readLocalFileHeader();
         if (zipHeader) {
-          await this.tokenizer.ignore(zipHeader.extraFieldLength);
+          await this.ignore(zipHeader.extraFieldLength);
           this.checkEntrySize(fileHeader);
           this.checkEntrySize(zipHeader);
-          const fileData = new Uint8Array(fileHeader.compressedSize);
-          await this.tokenizer.readBuffer(fileData);
+          const fileData = await this.readData(fileHeader.compressedSize);
           await this.inflate(zipHeader, fileData, next.handler);
         }
       }
@@ -328,8 +411,8 @@ export class ZipHandler {
   private async readLocalFileHeader(): Promise<ILocalFileHeader | false> {
     const signature = await this.tokenizer.peekToken(UINT32_LE);
     if (signature === Signature.LocalFileHeader) {
-      const header = await this.tokenizer.readToken(LocalFileHeaderToken);
-      header.filename = await this.tokenizer.readToken(new StringType(header.filenameLength, 'utf-8'));
+      const header = await this.readToken(LocalFileHeaderToken);
+      header.filename = await this.readToken(new StringType(header.filenameLength, 'utf-8'));
       return header;
     }
     if (signature === Signature.CentralFileHeader) {
@@ -342,32 +425,17 @@ export class ZipHandler {
   }
 }
 
-function indexOf(buffer: Uint8Array, portion: Uint8Array): number {
-  const bufferLength = buffer.length;
-  const portionLength = portion.length;
-
-  // Return -1 if the portion is longer than the buffer
-  if (portionLength > bufferLength) {
-    return -1;
-  }
-
-  // Search for the portion in the buffer
-  for (let i = 0; i <= bufferLength - portionLength; i++) {
-    let found = true;
-
-    for (let j = 0; j < portionLength; j++) {
-      if (buffer[i + j] !== portion[j]) {
-        found = false;
-        break;
-      }
-    }
-
-    if (found) {
-      return i; // Return the starting offset
+function findDescriptor(buffer: Uint8Array, consumed: number, allowTruncated: boolean): number {
+  for (let i = 0; i <= buffer.length - (allowTruncated ? 4 : DataDescriptor.len); i++) {
+    if (
+      UINT32_LE.get(buffer, i) === Signature.DataDescriptor &&
+      (buffer.length - i < 12 || UINT32_LE.get(buffer, i + 8) === consumed + i)
+    ) {
+      return i;
     }
   }
 
-  return -1; // Not found
+  return -1;
 }
 
 function mergeArrays(chunks: Uint8Array[]) {
