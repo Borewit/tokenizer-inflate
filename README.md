@@ -93,6 +93,11 @@ A limit violation throws the exported `ZipLimitError` (a `RangeError`), with `li
 Invalid options throw `RangeError` when constructing the handler. After a processing failure,
 close the tokenizer; extraction is not resumable.
 
+For random-access sources, central-directory entries are parsed within the directory's declared
+byte range using a borrowed tokenizer view. An entry crossing that range throws
+`strtok3.TokenizerBoundaryError`. Reading the directory restores the source position on both
+success and failure, and leaves the source open.
+
 #### Methods
  
 - `isZip(): Promise<boolean>`
