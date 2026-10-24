@@ -646,17 +646,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tokenizer/inflate@npm:^0.4.1":
-  version: 0.4.1
-  resolution: "@tokenizer/inflate@npm:0.4.1"
-  dependencies:
-    debug: "npm:^4.4.3"
-    token-types: "npm:^6.1.1"
-  checksum: 10c0/9817516efe21d1ce3bdfb80a1f94efc8981064ce3873448ba79f4d81d96c0694c484c289bd042d346ae5536cf77f5aa9a367d39c3df700eb610761b7c306b4de
-  languageName: node
-  linkType: hard
-
-"@tokenizer/inflate@workspace:.":
+"@tokenizer/inflate@npm:^0.5.1, @tokenizer/inflate@workspace:.":
   version: 0.0.0-use.local
   resolution: "@tokenizer/inflate@workspace:."
   dependencies:
@@ -670,7 +660,7 @@ __metadata:
     chai: "npm:^6.3.0"
     debug: "npm:^4.4.3"
     del-cli: "npm:^8.0.1"
-    file-type: "npm:^22.1.1"
+    file-type: "npm:^22.2.0"
     mocha: "npm:^12.0.3"
     strtok3: "npm:^10.6.2"
     token-types: "npm:^6.1.2"
@@ -1178,15 +1168,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"file-type@npm:^22.1.1":
-  version: 22.1.1
-  resolution: "file-type@npm:22.1.1"
+"file-type@npm:^22.2.0":
+  version: 22.2.0
+  resolution: "file-type@npm:22.2.0"
   dependencies:
-    "@tokenizer/inflate": "npm:^0.4.1"
-    strtok3: "npm:^10.3.5"
+    "@tokenizer/inflate": "npm:^0.5.1"
+    strtok3: "npm:^10.5.0"
     token-types: "npm:^6.1.2"
-    uint8array-extras: "npm:^1.5.0"
-  checksum: 10c0/ab917e88d00f4ce33c90d95d1c41fbb96a91e6ae247fdf7ee3d4deb68b3ba7162dd9be0a2fa9e79ac037bbaae4f581a035f071e585f111ac064f0c0f9e7273d4
+    uint8array-extras: "npm:^1.6.0"
+  checksum: 10c0/fa7b025090a604116fdeb25ba740be8c859f8bd89a9c263e637cda7b11f47d9c5e341c4fd4e492137d3d212ab4cc7a4c06e204720a801a501c1f1af3c5b8c60a
   languageName: node
   linkType: hard
 
@@ -1607,7 +1597,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"strtok3@npm:^10.6.2":
+"strtok3@npm:^10.5.0, strtok3@npm:^10.6.2":
   version: 10.6.2
   resolution: "strtok3@npm:10.6.2"
   dependencies:
@@ -1657,7 +1647,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"token-types@npm:^6.1.1, token-types@npm:^6.1.2":
+"token-types@npm:^6.1.2":
   version: 6.1.2
   resolution: "token-types@npm:6.1.2"
   dependencies:
@@ -1832,7 +1822,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"uint8array-extras@npm:^1.5.0":
+"uint8array-extras@npm:^1.6.0":
   version: 1.6.0
   resolution: "uint8array-extras@npm:1.6.0"
   checksum: 10c0/d53177c025ebea31af1e445abd474027b66341a56f207f352a5a486aa1d492e228bbc883dc4a51ea8358bb88d60a019351e20a92dd17c2ef8326e29fbad57127
