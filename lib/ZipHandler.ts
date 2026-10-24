@@ -1,5 +1,5 @@
 import initDebug from 'debug';
-import type { IRandomAccessTokenizer, ITokenizer } from 'strtok3';
+import { createTokenizerView, type IRandomAccessTokenizer, type ITokenizer } from 'strtok3/core';
 import { StringType, UINT32_LE } from 'token-types';
 import { type ZipHandlerOptions, ZipLimitError } from './ZipLimitError.js';
 import {
@@ -111,27 +111,34 @@ export class ZipHandler {
     }
     debug('Reading central-directory...');
     const pos = this.tokenizer.position;
-    const offset = await this.findEndOfCentralDirectoryLocator();
-    if (offset > 0) {
-      debug('Central-directory 32-bit signature found');
-      const eocdHeader = await this.tokenizer.readToken(EndOfCentralDirectoryRecordToken, offset);
-      const files: IFileHeader[] = [];
-      (this.tokenizer as IRandomAccessTokenizer).setPosition(eocdHeader.offsetOfStartOfCd);
-      for (let n = 0; n < eocdHeader.nrOfEntriesOfSize; ++n) {
-        const entry = await this.tokenizer.readToken(FileHeader);
-        if (entry.signature !== Signature.CentralFileHeader) {
-          throw new Error('Expected Central-File-Header signature');
+    try {
+      const offset = await this.findEndOfCentralDirectoryLocator();
+      if (offset > 0) {
+        debug('Central-directory 32-bit signature found');
+        const eocdHeader = await this.tokenizer.readToken(EndOfCentralDirectoryRecordToken, offset);
+        const files: IFileHeader[] = [];
+        (this.tokenizer as IRandomAccessTokenizer).setPosition(eocdHeader.offsetOfStartOfCd);
+        const directory = createTokenizerView(this.tokenizer, eocdHeader.sizeOfCd);
+        try {
+          for (let n = 0; n < eocdHeader.nrOfEntriesOfSize; ++n) {
+            const entry = await directory.readToken(FileHeader);
+            if (entry.signature !== Signature.CentralFileHeader) {
+              throw new Error('Expected Central-File-Header signature');
+            }
+            entry.filename = await directory.readToken(new StringType(entry.filenameLength, 'utf-8'));
+            await directory.ignore(entry.extraFieldLength);
+            await directory.ignore(entry.fileCommentLength);
+            files.push(entry);
+            debug(`Add central-directory file-entry: n=${n + 1}/${files.length}: filename=${files[n].filename}`);
+          }
+          return files;
+        } finally {
+          await directory.close();
         }
-        entry.filename = await this.tokenizer.readToken(new StringType(entry.filenameLength, 'utf-8'));
-        await this.tokenizer.ignore(entry.extraFieldLength);
-        await this.tokenizer.ignore(entry.fileCommentLength);
-        files.push(entry);
-        debug(`Add central-directory file-entry: n=${n + 1}/${files.length}: filename=${files[n].filename}`);
       }
+    } finally {
       (this.tokenizer as IRandomAccessTokenizer).setPosition(pos);
-      return files;
     }
-    (this.tokenizer as IRandomAccessTokenizer).setPosition(pos);
   }
 
   async unzip(fileCb: InflateFileFilter): Promise<void> {
