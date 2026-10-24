@@ -52,8 +52,12 @@ const fileFilter = (file) => {
 
 async function extractFiles(zipFilePath) {
   const tokenizer = await fromFile(zipFilePath);
-  const zipHandler = new ZipHandler(tokenizer);
-  await zipHandler.unzip(fileFilter);
+  try {
+    const zipHandler = new ZipHandler(tokenizer);
+    await zipHandler.unzip(fileFilter);
+  } finally {
+    await tokenizer.close();
+  }
 }
 
 extractFiles('example.zip').catch(console.error);
@@ -106,17 +110,17 @@ success and failure, and leaves the source open.
 
 - `unzip(fileCb: InflateFileFilter): Promise<void>`
 
-  Extracts files from the ZIP archive, applying the provided `InflateFileFilter` callback to each file.
-
-```InflatedDataHandler``` 
+  Extracts files from the ZIP archive, applying the provided [InflateFileFilter](#inflatefilefilter) callback to each file.
+  To extract a file, return an object whose `handler` is an [InflatedDataHandler](#inflateddatahandler).
+  Return `{ handler: false }` to skip the file.
 
 ## Types
 
 ### `InflateFileFilter`
 ```ts
-type InflateFileFilter = (file: IFullZipHeader) => InflateFileFilterResult;
+type InflateFileFilter = (file: ILocalFileHeader) => InflateFileFilterResult;
 ```
-Callback function to determine whether a file should be handled or ignored.
+Callback function that receives the ZIP entry header and returns an [InflateFileFilterResult](#inflatefilefilterresult) to select or skip the entry.
 
 ### `InflateFileFilterResult`
 ```ts
@@ -124,15 +128,18 @@ type InflateFileFilterResult = {
   handler: InflatedDataHandler | false; // Handle file data or ignore
   stop?: boolean; // Stop processing further files
 };
-
 ```
-Returned from `InflateFileFilter` to control file handling and extraction flow.
+Returned from [InflateFileFilter](#inflatefilefilter) to control file handling and extraction flow.
+Set `handler` to an [InflatedDataHandler](#inflateddatahandler) to receive the entry data, or `false` to skip it.
+Set `stop: true` to stop after the current entry has been handled or skipped.
 
 ### `InflatedDataHandler`
 ```ts
 type InflatedDataHandler = (fileData: Uint8Array) => Promise<void>;
 ```
-Handler for processing uncompressed file data.
+Asynchronous callback assigned to `InflateFileFilterResult.handler` for a selected entry.
+It receives the complete uncompressed entry data as a `Uint8Array`, including for stored (uncompressed) entries.
+Extraction awaits the returned promise before processing the next entry.
 
 ## Compatibility
 
