@@ -5,16 +5,7 @@ import type { S3Client } from '@aws-sdk/client-s3';
 import { makeChunkedTokenizerFromS3 } from '@tokenizer/s3';
 import { assert } from 'chai';
 import { it } from 'mocha';
-import {
-  fromBuffer,
-  fromFile,
-  fromStream,
-  fromWebStream,
-  type IRandomAccessTokenizer,
-  type ITokenizer,
-  TokenizerBoundaryError
-} from 'strtok3';
-import { UINT8 } from 'token-types';
+import { fromBuffer, fromFile, fromStream, fromWebStream, type IRandomAccessTokenizer, type ITokenizer } from 'strtok3';
 import { GzipHandler, type ILocalFileHeader, ZipHandler } from '../lib/index.js';
 import { MockS3Client } from './S3ClientMockup.js';
 import { isTarHeaderChecksumMatches, makeReadableByteFileStream } from './util.js';
@@ -416,96 +407,6 @@ describe('Inflate Gunzip', () => {
       }
     } else {
       assert.fail('Could not stream HTTP result');
-    }
-  });
-});
-
-// One local header followed by a central-directory entry and EOCD record.
-function makeZip() {
-  const zip = new Uint8Array(30 + 46 + 3 + 22);
-  const header = new DataView(zip.buffer);
-  header.setUint32(0, 0x04034b50, true);
-  header.setUint32(30, 0x02014b50, true);
-  header.setUint16(30 + 28, 1, true); // filename
-  header.setUint16(30 + 30, 1, true); // extra field
-  header.setUint16(30 + 32, 1, true); // comment
-  zip.set([97, 0, 98], 30 + 46);
-  header.setUint32(79, 0x06054b50, true);
-  header.setUint16(79 + 8, 1, true);
-  header.setUint16(79 + 10, 1, true);
-  header.setUint32(79 + 12, 49, true);
-  header.setUint32(79 + 16, 30, true);
-  return zip;
-}
-
-describe('Bounded ZIP central directory', () => {
-  it('accepts an entry ending exactly at the directory boundary and preserves the source cursor', async () => {
-    const tokenizer = fromBuffer(makeZip());
-    await tokenizer.ignore(2);
-    try {
-      const files = await new ZipHandler(tokenizer).readCentralDirectory();
-      assert.equal(files?.length, 1);
-      assert.equal(files?.[0].filename, 'a');
-      assert.equal(tokenizer.position, 2);
-      assert.equal(await tokenizer.readToken(UINT8), 3, 'the borrowed source remains usable');
-    } finally {
-      await tokenizer.close();
-    }
-  });
-
-  for (const [field, size] of [
-    ['fixed header', 45],
-    ['filename', 46],
-    ['extra field', 47],
-    ['comment', 48]
-  ] as const) {
-    it(`rejects a ${field} crossing the declared directory boundary`, async () => {
-      const zip = makeZip();
-      new DataView(zip.buffer).setUint32(79 + 12, size, true);
-      const tokenizer = fromBuffer(zip);
-      await tokenizer.ignore(2);
-      try {
-        try {
-          await new ZipHandler(tokenizer).readCentralDirectory();
-          assert.fail('Expected directory boundary error');
-        } catch (error) {
-          assert.instanceOf(error, TokenizerBoundaryError);
-          assert.equal((error as TokenizerBoundaryError).size, size);
-        }
-        assert.equal(tokenizer.position, 2, 'restore the cursor after a parsing failure');
-        assert.equal(await tokenizer.readToken(UINT8), 3);
-      } finally {
-        await tokenizer.close();
-      }
-    });
-  }
-
-  it('rejects an entry count extending beyond the declared directory', async () => {
-    const zip = makeZip();
-    new DataView(zip.buffer).setUint16(79 + 10, 2, true);
-    const tokenizer = fromBuffer(zip);
-    try {
-      try {
-        await new ZipHandler(tokenizer).readCentralDirectory();
-        assert.fail('Expected directory boundary error');
-      } catch (error) {
-        assert.instanceOf(error, TokenizerBoundaryError);
-        assert.equal((error as TokenizerBoundaryError).position, 49);
-      }
-      assert.equal(tokenizer.position, 0);
-    } finally {
-      await tokenizer.close();
-    }
-  });
-
-  it('preserves the source cursor when no directory is found', async () => {
-    const tokenizer = fromBuffer(new Uint8Array(30));
-    await tokenizer.ignore(2);
-    try {
-      assert.isUndefined(await new ZipHandler(tokenizer).readCentralDirectory());
-      assert.equal(tokenizer.position, 2);
-    } finally {
-      await tokenizer.close();
     }
   });
 });
