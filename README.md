@@ -72,11 +72,15 @@ A class for handling ZIP file parsing and extraction.
 new ZipHandler(tokenizer: ITokenizer, options?: ZipHandlerOptions)
 ```
 - **tokenizer**: An instance of ITokenizer to read the ZIP archive.
-- **options**: Optional per-entry byte limits. Each accepts a positive safe integer or `Infinity`.
+- **options**: Optional processing limits and traversal settings. Each numeric limit accepts a positive safe integer or `Infinity`.
   Omitted limits default to `Infinity`, preserving unlimited processing.
 
 ```ts
 const zipHandler = new ZipHandler(tokenizer, {
+  maxEntryCount: 1024,
+  maxTotalScanBytes: 16 * 1024 * 1024,
+  maxTotalDataDescriptorScanBytes: 1024 * 1024,
+  maxSkippedEntrySize: 1024 * 1024,
   maxDataDescriptorScanBytes: 1024 * 1024,
   maxCompressedSize: 1024 * 1024,
   maxUncompressedSize: 4 * 1024 * 1024
@@ -84,23 +88,47 @@ const zipHandler = new ZipHandler(tokenizer, {
 ```
 
 `maxDataDescriptorScanBytes` bounds bytes before the descriptor signature when the compressed
-size is unknown, even for ignored entries. Signature lookahead uses up to four additional bytes.
+size is unknown, even for ignored entries. Descriptor candidates are checked against their
+compressed-size field so an embedded signature with a different size does not end the scan.
+Lookahead uses up to 16 additional bytes to validate a candidate descriptor.
 `maxCompressedSize` bounds compressed data buffered for selected entries, and
 `maxUncompressedSize` bounds their decompressed output, including stored entries.
 Limits apply to local-header and central-directory sizes before allocation, and to actual
 output before retaining chunks or combining buffers. Decompression is canceled on overflow.
-These are per-entry limits, not a total process memory budget; tokenizer lookahead and native
+`maxEntryCount` bounds entries visited, including ignored entries. `maxTotalScanBytes` bounds
+metadata and compressed data consumed across one traversal, including ignored local-header
+payloads. Random-access seek distances are excluded; the end-of-directory search and record
+are included, and bytes read again during extraction count again. Ignored central-directory
+payloads are not read or counted. `maxTotalDataDescriptorScanBytes` bounds cumulative payload
+bytes scanned for unknown-size entries, excluding their descriptors. `maxSkippedEntrySize`
+bounds a single ignored payload when local-header traversal must pass over it.
+Counters reset for each `unzip()` or `readCentralDirectory()` call.
+
+These limits are not a total process memory budget; tokenizer lookahead and native
 decompression have their own buffers. Configure tokenizer limits separately where available.
 
 A limit violation throws the exported `ZipLimitError` (a `RangeError`), with `limit`,
-`requestedSize`, and `maxSize` properties. No data handler is called for the rejected entry.
-Invalid options throw `RangeError` when constructing the handler. After a processing failure,
-close the tokenizer; extraction is not resumable.
+`requestedSize`, and `maxSize` properties. Sizes are byte counts except for `maxEntryCount`.
+No data handler is called for an entry rejected by a limit; earlier handlers may already have run.
+Invalid numeric limit options throw `RangeError` when constructing the handler. Invalid
+non-boolean values for `useCentralDirectory` or `allowTruncatedDataDescriptor` throw `TypeError`
+during construction. After a processing failure, close the tokenizer; extraction is not resumable.
 
 For random-access sources, central-directory entries are parsed within the directory's declared
 byte range using a borrowed tokenizer view. An entry crossing that range throws
 `strtok3.TokenizerBoundaryError`. Reading the directory restores the source position on both
-success and failure, and leaves the source open.
+success and failure, and leaves the source open. `unzip()` processes directory entries one at a
+time and stops parsing when the callback returns `stop: true`, restoring the original source
+position on completion or failure. `readCentralDirectory()` still explicitly collects an array.
+
+Set `useCentralDirectory: false` to scan local headers even on random-access sources. This is
+useful for detectors that need consistent local-header ordering and support partial archives.
+It does not disable entry or byte limits.
+
+`allowTruncatedDataDescriptor: true` lets a detector receive the available entry data when a
+descriptor is missing or truncated at EOF. Extraction still rejects the incomplete descriptor
+after the handler returns; the caller can retain a detection result. All configured limits
+still apply. The default is `false`, which rejects incomplete descriptors before delivering data.
 
 #### Methods
  
