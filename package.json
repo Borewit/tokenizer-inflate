@@ -50,7 +50,7 @@
   },
   "dependencies": {
     "debug": "^4.4.3",
-    "strtok3": "^10.6.2",
+    "strtok3": "^10.7.0",
     "token-types": "^6.1.2"
   },
   "repository": {
