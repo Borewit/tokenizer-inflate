@@ -51,7 +51,7 @@
   "dependencies": {
     "debug": "^4.4.3",
     "strtok3": "^10.6.2",
-    "token-types": "^6.1.2"
+    "token-types": "^6.2.0"
   },
   "repository": {
     "type": "git",
