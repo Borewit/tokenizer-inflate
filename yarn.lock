@@ -656,7 +656,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tokenizer/inflate@npm:^0.5.1, @tokenizer/inflate@workspace:.":
+"@tokenizer/inflate@npm:^0.5.1":
+  version: 0.5.2
+  resolution: "@tokenizer/inflate@npm:0.5.2"
+  dependencies:
+    debug: "npm:^4.4.3"
+    strtok3: "npm:^10.6.2"
+    token-types: "npm:^6.1.2"
+  checksum: 10c0/9bfce4fb156548731849d54d85a9bc11af6d26b0be306abec63ab5a07d2aabde344d2a3a4b76276e878ca6243fd01aa387686fa9497a8e9c31c3047db763c94b
+  languageName: node
+  linkType: hard
+
+"@tokenizer/inflate@workspace:.":
   version: 0.0.0-use.local
   resolution: "@tokenizer/inflate@workspace:."
   dependencies:
