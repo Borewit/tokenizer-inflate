@@ -117,7 +117,8 @@ export class ZipHandler {
   }
 
   async isZip(): Promise<boolean> {
-    return (await this.peekSignature()) === Signature.LocalFileHeader;
+    const signature = await this.peekSignature();
+    return signature === Signature.LocalFileHeader || signature === Signature.EndOfCentralDirectory;
   }
 
   private peekSignature(): Promise<number> {
@@ -168,7 +169,7 @@ export class ZipHandler {
     const pos = this.tokenizer.position;
     try {
       const offset = await this.findEndOfCentralDirectoryLocator();
-      if (offset > 0) {
+      if (offset >= 0) {
         debug('Central-directory 32-bit signature found');
         (this.tokenizer as IRandomAccessTokenizer).setPosition(offset);
         const eocdHeader = await this.readToken(EndOfCentralDirectoryRecordToken);
@@ -415,7 +416,7 @@ export class ZipHandler {
       header.filename = await this.readToken(new StringType(header.filenameLength, 'utf-8'));
       return header;
     }
-    if (signature === Signature.CentralFileHeader) {
+    if (signature === Signature.CentralFileHeader || signature === Signature.EndOfCentralDirectory) {
       return false;
     }
     if (signature === 0xe011cfd0) {
