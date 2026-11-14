@@ -24,6 +24,7 @@ import {
   expectLimit,
   extract,
   makeCentralDirectoryZip,
+  makeEmptyZip,
   makeRepeatedZip,
   makeZip,
   makeZipWithTrailingDeflateData,
@@ -821,6 +822,67 @@ describe('ZipHandler', () => {
       try {
         assert.isUndefined(await new ZipHandler(tokenizer).readCentralDirectory());
         assert.equal(tokenizer.position, 2);
+      } finally {
+        await tokenizer.close();
+      }
+    });
+  });
+
+  describe('Empty ZIP', () => {
+    for (const central of [false, true]) {
+      it(`recognizes an empty ZIP via isZip() (central=${central})`, async () => {
+        const zip = makeEmptyZip();
+        const tokenizer = central ? fromBuffer(zip) : await stream(zip);
+        try {
+          assert.isTrue(await new ZipHandler(tokenizer).isZip());
+        } finally {
+          await tokenizer.close();
+        }
+      });
+
+      it(`returns [] from readCentralDirectory() for an empty ZIP (central=${central})`, async () => {
+        const zip = makeEmptyZip();
+        const tokenizer = central ? fromBuffer(zip) : await stream(zip);
+        try {
+          const files = await new ZipHandler(tokenizer).readCentralDirectory();
+          assert.deepEqual(files, central ? [] : undefined);
+        } finally {
+          await tokenizer.close();
+        }
+      });
+
+      it(`completes unzip() with no files for an empty ZIP (central=${central})`, async () => {
+        const zip = makeEmptyZip();
+        const tokenizer = central ? fromBuffer(zip) : await stream(zip);
+        try {
+          const files: Uint8Array[] = [];
+          await new ZipHandler(tokenizer).unzip(() => ({
+            handler: async data => {
+              files.push(data);
+            }
+          }));
+          assert.deepEqual(files, []);
+        } finally {
+          await tokenizer.close();
+        }
+      });
+
+      it(`does not throw when unzip() skips all entries of an empty ZIP (central=${central})`, async () => {
+        const zip = makeEmptyZip();
+        const tokenizer = central ? fromBuffer(zip) : await stream(zip);
+        try {
+          await new ZipHandler(tokenizer).unzip(() => ({ handler: false }));
+        } finally {
+          await tokenizer.close();
+        }
+      });
+    }
+
+    it('unzip() with useCentralDirectory: false completes on a non-random-access stream', async () => {
+      const zip = makeEmptyZip();
+      const tokenizer = await stream(zip);
+      try {
+        await new ZipHandler(tokenizer, { useCentralDirectory: false }).unzip(() => ({ handler: false }));
       } finally {
         await tokenizer.close();
       }

@@ -116,6 +116,13 @@ export function makeCentralDirectoryZip() {
   return zip;
 }
 
+// A valid empty ZIP: only an End-of-Central-Directory record with zero entries.
+export function makeEmptyZip() {
+  const zip = new Uint8Array(22);
+  new DataView(zip.buffer).setUint32(0, 0x06054b50, true);
+  return zip;
+}
+
 export function makeRepeatedZip(count: number, size: number, descriptor = false, central = false): Uint8Array {
   const entry = makeZip(new Uint8Array(size).fill(1), descriptor).subarray(0, 30 + size + (descriptor ? 16 : 0));
   const dataLength = entry.length * count;

@@ -117,7 +117,8 @@ export class ZipHandler {
   }
 
   async isZip(): Promise<boolean> {
-    return (await this.peekSignature()) === Signature.LocalFileHeader;
+    const signature = await this.peekSignature();
+    return signature === Signature.LocalFileHeader || signature === Signature.EndOfCentralDirectory;
   }
 
   private peekSignature(): Promise<number> {
@@ -168,7 +169,7 @@ export class ZipHandler {
     const pos = this.tokenizer.position;
     try {
       const offset = await this.findEndOfCentralDirectoryLocator();
-      if (offset > 0) {
+      if (offset >= 0) {
         debug('Central-directory 32-bit signature found');
         (this.tokenizer as IRandomAccessTokenizer).setPosition(offset);
         const eocdHeader = await this.readToken(EndOfCentralDirectoryRecordToken);
@@ -324,13 +325,14 @@ export class ZipHandler {
       if (next.handler) {
         (this.tokenizer as IRandomAccessTokenizer).setPosition(fileHeader.relativeOffsetOfLocalHeader);
         const zipHeader = await this.readLocalFileHeader();
-        if (zipHeader) {
-          await this.ignore(zipHeader.extraFieldLength);
-          this.checkEntrySize(fileHeader);
-          this.checkEntrySize(zipHeader);
-          const fileData = await this.readData(fileHeader.compressedSize);
-          await this.inflate(zipHeader, fileData, next.handler);
+        if (!zipHeader) {
+          throw new Error(`Expected local-file-header at offset ${fileHeader.relativeOffsetOfLocalHeader}`);
         }
+        await this.ignore(zipHeader.extraFieldLength);
+        this.checkEntrySize(fileHeader);
+        this.checkEntrySize(zipHeader);
+        const fileData = await this.readData(fileHeader.compressedSize);
+        await this.inflate(zipHeader, fileData, next.handler);
       }
       if (next.stop) {
         break;
@@ -415,7 +417,7 @@ export class ZipHandler {
       header.filename = await this.readToken(new StringType(header.filenameLength, 'utf-8'));
       return header;
     }
-    if (signature === Signature.CentralFileHeader) {
+    if (signature === Signature.CentralFileHeader || signature === Signature.EndOfCentralDirectory) {
       return false;
     }
     if (signature === 0xe011cfd0) {
