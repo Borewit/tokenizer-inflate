@@ -8,14 +8,16 @@
 The library provides a customizable way to parse ZIP archives and extract compressed data while minimizing memory usage.
 
 ## Features
+
 - Efficient Decompression: Handles streams compressed with DEFLATE and related formats (e.g., gzip).
-- Tokenizer Compatibility: Seamlessly integrates with [strtok3](https://github.com/Borewit/strtok3). For example, use  [@tokenizer/s3](https://github.com/Borewit/tokenizer-s3) for efficient partial extraction of a Zip stored on AWS S3 cloud file storage.
+- Tokenizer Compatibility: Seamlessly integrates with [strtok3](https://github.com/Borewit/strtok3). For example, use [@tokenizer/s3](https://github.com/Borewit/tokenizer-s3) for efficient partial extraction of a Zip stored on AWS S3 cloud file storage.
 - Streamlined Interface: Provides an intuitive API for working with compressed data in streaming and random-access scenarios.
 - Chunked Data Access: Leverages the underlying media's capabilities to offer chunked or random access to data, unlike traditional streams.
 - Plug-and-Play: Easily integrate with existing tokenizer-based workflows for parsing file metadata or binary structures.
 - Interrupt the extraction process conditionally.
 
 ## Installation
+
 ```bash
 npm install @tokenizer/inflate
 ```
@@ -30,20 +32,20 @@ The following example demonstrates how to use the library to extract .txt files 
 import { ZipHandler } from '@tokenizer/inflate';
 import { fromFile } from 'strtok3';
 
-const fileFilter = (file) => {
+const fileFilter = file => {
   console.log(`Processing file: ${file.filename}`);
 
-  if (file.filename?.endsWith(".stop")) {
+  if (file.filename?.endsWith('.stop')) {
     console.log(`Stopping processing due to file: ${file.filename}`);
     return { handler: false, stop: true }; // Stop the unzip process
   }
 
-  if (file.filename?.endsWith(".txt")) {
+  if (file.filename?.endsWith('.txt')) {
     return {
-      handler: async (data) => {
+      handler: async data => {
         console.log(`Extracted text file: ${file.filename}`);
         console.log(new TextDecoder().decode(data));
-      },
+      }
     };
   }
 
@@ -66,11 +68,15 @@ extractFiles('example.zip').catch(console.error);
 ## API
 
 ### `ZipHandler`
+
 A class for handling ZIP file parsing and extraction.
+
 #### Constructor
+
 ```ts
 new ZipHandler(tokenizer: ITokenizer, options?: ZipHandlerOptions)
 ```
+
 - **tokenizer**: An instance of ITokenizer to read the ZIP archive.
 - **options**: Optional processing limits and traversal settings. Each numeric limit accepts a positive safe integer or `Infinity`.
   Omitted limits default to `Infinity`, preserving unlimited processing.
@@ -131,10 +137,10 @@ after the handler returns; the caller can retain a detection result. All configu
 still apply. The default is `false`, which rejects incomplete descriptors before delivering data.
 
 #### Methods
- 
+
 - `isZip(): Promise<boolean>`
 
-   Determines whether the input file is a ZIP archive.
+  Determines whether the input file is a ZIP archive.
 
 - `unzip(fileCb: InflateFileFilter): Promise<void>`
 
@@ -145,12 +151,14 @@ still apply. The default is `false`, which rejects incomplete descriptors before
 ## Types
 
 ### `InflateFileFilter`
+
 ```ts
 type InflateFileFilter = (file: ILocalFileHeader) => InflateFileFilterResult;
 ```
 Callback function that receives the ZIP entry header and returns an [InflateFileFilterResult](#inflatefilefilterresult) to select or skip the entry.
 
 ### `InflateFileFilterResult`
+
 ```ts
 type InflateFileFilterResult = {
   handler: InflatedDataHandler | false; // Handle file data or ignore
@@ -162,6 +170,7 @@ Set `handler` to an [InflatedDataHandler](#inflateddatahandler) to receive the e
 Set `stop: true` to stop after the current entry has been handled or skipped.
 
 ### `InflatedDataHandler`
+
 ```ts
 type InflatedDataHandler = (fileData: Uint8Array) => Promise<void>;
 ```
@@ -180,4 +189,5 @@ If used with Node.js, it requires version ≥ 18.
 See the [contribution guide](CONTRIBUTING.md) for code style and development checks.
 
 ## License
+
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
